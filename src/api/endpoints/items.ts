@@ -13,6 +13,7 @@ export interface ItemUnitInput {
   unit: string;
   standard_price: number;
   is_default?: boolean;
+  is_weight_variable?: boolean;
 }
 
 export async function listItems(params?: {

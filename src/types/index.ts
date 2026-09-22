@@ -72,6 +72,11 @@ export interface ItemUnit {
   standard_price: string;
   is_default: boolean;
   is_active: boolean;
+  /** When true, this unit is a container (bag/sack/bundle/...) billed
+   * by actual weight — billing enters one weight per container and
+   * the amount is computed from their summed kg, not a flat price
+   * per container. `standard_price` is then a rate per kg. */
+  is_weight_variable: boolean;
 }
 
 export interface Item {
@@ -104,6 +109,10 @@ export interface BillItem {
   actual_rate: string;
   discount: string;
   line_total: string;
+  /** Set only for variable-weight lines — quantity/unit above already
+   * carry this same total in kg, so nothing needs to special-case
+   * display; this is here mainly for completeness/audit. */
+  total_weight_kg?: string | null;
   /** The live item's Telugu name (item_name_snapshot is always
    * English, captured at bill time) — used to print/PDF the item in
    * Telugu when the business's print-language setting calls for it. */

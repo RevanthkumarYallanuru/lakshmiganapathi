@@ -38,6 +38,7 @@ export function ItemUnitsDialog({
   const [unitName, setUnitName] = useState("");
   const [unitPrice, setUnitPrice] = useState("");
   const [makeDefault, setMakeDefault] = useState(false);
+  const [weightVariable, setWeightVariable] = useState(false);
 
   const itemId = item?.id ?? "";
 
@@ -62,12 +63,14 @@ export function ItemUnitsDialog({
         unit: unitName.trim(),
         standard_price: Number(unitPrice),
         is_default: makeDefault || units.length === 0,
+        is_weight_variable: weightVariable,
       }),
     onSuccess: async () => {
       invalidate();
       setUnitName("");
       setUnitPrice("");
       setMakeDefault(false);
+      setWeightVariable(false);
     },
     onError: (error) => {
       toast({
@@ -136,6 +139,9 @@ export function ItemUnitsDialog({
                   {unit.is_default && (
                     <Badge tone="accent">{t("items.defaultUnit")}</Badge>
                   )}
+                  {unit.is_weight_variable && (
+                    <Badge tone="neutral">{t("items.weightVariableBadge")}</Badge>
+                  )}
                   {!unit.is_active && (
                     <Badge tone="neutral">{t("common.inactive")}</Badge>
                   )}
@@ -181,7 +187,7 @@ export function ItemUnitsDialog({
             className="w-24"
           />
           <Input
-            label={t("items.standardPrice")}
+            label={weightVariable ? t("items.ratePerKg") : t("items.standardPrice")}
             type="number"
             min="0"
             step="0.01"
@@ -199,6 +205,15 @@ export function ItemUnitsDialog({
             />
             {t("items.defaultUnit")}
           </label>
+          <label className="mb-2.5 flex items-center gap-1.5 text-xs text-slate-500">
+            <input
+              type="checkbox"
+              checked={weightVariable}
+              onChange={(event) => setWeightVariable(event.target.checked)}
+              className="h-3.5 w-3.5 rounded border-slate-300"
+            />
+            {t("items.weightVariable")}
+          </label>
           <Button
             type="submit"
             size="sm"
@@ -209,6 +224,10 @@ export function ItemUnitsDialog({
             {t("items.addUnit")}
           </Button>
         </form>
+
+        {weightVariable && (
+          <p className="text-xs text-slate-400">{t("items.weightVariableHint")}</p>
+        )}
 
         {units.length === 0 && (
           <p className="text-xs text-slate-400">{t("items.unitsOptionalHint")}</p>

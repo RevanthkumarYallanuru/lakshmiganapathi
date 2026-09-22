@@ -17,7 +17,11 @@ import {
   useToast,
 } from "@/components/ui";
 import { BillItemRow } from "@/features/billing/BillItemRow";
-import { computeLineTotal, type BillLineDraft } from "@/features/billing/billTypes";
+import {
+  computeLineTotal,
+  isWeightVariable,
+  type BillLineDraft,
+} from "@/features/billing/billTypes";
 import { CustomerPicker } from "@/features/shared/CustomerPicker";
 import { ItemPicker } from "@/features/shared/ItemPicker";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -105,6 +109,9 @@ export function BillNewPage() {
           quantity: Number(line.quantity) || 0,
           actual_rate: Number(line.actualRate) || 0,
           discount: Number(line.discount) || 0,
+          weights: isWeightVariable(line)
+            ? line.weights.map((w) => Number(w) || 0)
+            : undefined,
         })),
       }),
     onSuccess: (bill) => {
@@ -167,6 +174,7 @@ export function BillNewPage() {
         actualRate: defaultUnit.standard_price,
         quantity: "1",
         discount: "0",
+        weights: defaultUnit.is_weight_variable ? [""] : [],
       },
     ]);
   }
@@ -194,6 +202,17 @@ export function BillNewPage() {
     }
     if (lines.some((line) => (Number(line.quantity) || 0) <= 0)) {
       setFormError(t("billing.noItemsAdded"));
+      return;
+    }
+    if (
+      lines.some(
+        (line) =>
+          isWeightVariable(line) &&
+          (line.weights.length !== (Number(line.quantity) || 0) ||
+            line.weights.some((w) => !w || Number(w) <= 0))
+      )
+    ) {
+      setFormError(t("billing.weightsIncomplete"));
       return;
     }
     if (paid > 0 && !paymentMethod) {

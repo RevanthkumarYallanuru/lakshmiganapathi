@@ -7,6 +7,10 @@ export interface BillItemInput {
   quantity: number;
   actual_rate?: number;
   discount?: number;
+  /** One actual weight (kg) per container — only meaningful when the
+   * chosen unit is weight-variable (see ItemUnit.is_weight_variable);
+   * must have exactly `quantity` entries. */
+  weights?: number[];
 }
 
 export interface CreateBillInput {
