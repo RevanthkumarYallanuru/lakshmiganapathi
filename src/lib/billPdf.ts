@@ -44,6 +44,12 @@ export interface BillPdfOptions {
 const TELUGU_FONT_FAMILY = "NotoSansTelugu";
 let teluguFontCache: Promise<{ regular: string; bold: string } | null> | null = null;
 
+const TELUGU_CANVAS_FONT_FAMILY = "NotoSansTeluguCanvas";
+let teluguCanvasFontCache: Promise<boolean> | null = null;
+const RASTER_DPI = 300;
+const PX_PER_PT = RASTER_DPI / 72;
+const MM_PER_PX = 25.4 / RASTER_DPI;
+
 const PAGE_W = 210;
 const PAGE_H = 297;
 const MARGIN_L = 10;
@@ -74,6 +80,143 @@ function resolveFreeTextFont(text: string, teluguFontReady: boolean): string {
   return containsTelugu(text) && teluguFontReady ? TELUGU_FONT_FAMILY : "helvetica";
 }
 
+/** Registers the Telugu font as a real browser FontFace, so an
+ * offscreen canvas can shape it the same way the browser shapes any
+ * other Telugu text on the page (conjunct ligatures like య్య, correct
+ * vowel-sign/anusvara positioning). jsPDF's own text drawing does not
+ * perform this OpenType shaping — it lays out glyphs by simple
+ * left-to-right advance widths — so Telugu runs are rendered to an
+ * image via canvas and embedded instead (see `renderTeluguRunToImage`
+ * and `drawMixedScriptText`), rather than drawn as jsPDF vector text. */
+function ensureTeluguCanvasFont(): Promise<boolean> {
+  teluguCanvasFontCache ??= (async () => {
+    if (typeof FontFace === "undefined" || typeof document === "undefined") return false;
+    try {
+      const regular = new FontFace(
+        TELUGU_CANVAS_FONT_FAMILY,
+        "url(/fonts/NotoSansTelugu-Regular.ttf)",
+        { weight: "400" }
+      );
+      const bold = new FontFace(
+        TELUGU_CANVAS_FONT_FAMILY,
+        "url(/fonts/NotoSansTelugu-Bold.ttf)",
+        { weight: "700" }
+      );
+      await Promise.all([regular.load(), bold.load()]);
+      document.fonts.add(regular);
+      document.fonts.add(bold);
+      return true;
+    } catch {
+      return false;
+    }
+  })();
+  return teluguCanvasFontCache;
+}
+
+/** Renders one run of properly-shaped Telugu text to a PNG data URL at
+ * print resolution (300dpi) via an offscreen canvas. Dimensions are
+ * returned in mm (matching the jsPDF document's own unit) so the
+ * caller can place the image with `doc.addImage` the same way it
+ * would position vector text — `ascentMm` lets the caller convert
+ * from a text baseline y to the image's top-left corner. */
+function renderTeluguRunToImage(
+  text: string,
+  fontStyle: "normal" | "bold",
+  fontSizePt: number,
+  color: [number, number, number]
+): { dataUrl: string; widthMm: number; heightMm: number; ascentMm: number } | null {
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+
+  const weight = fontStyle === "bold" ? "700" : "400";
+  const fontPx = fontSizePt * PX_PER_PT;
+  ctx.font = `${weight} ${fontPx}px ${TELUGU_CANVAS_FONT_FAMILY}`;
+  const metrics = ctx.measureText(text);
+  const ascentPx = Math.ceil(metrics.actualBoundingBoxAscent || fontPx * 0.85);
+  const descentPx = Math.ceil(metrics.actualBoundingBoxDescent || fontPx * 0.25);
+  const widthPx = Math.max(1, Math.ceil(metrics.width));
+  const heightPx = Math.max(1, ascentPx + descentPx);
+
+  canvas.width = widthPx;
+  canvas.height = heightPx;
+  // Resizing the canvas resets its 2D context state, so font/fill
+  // must be re-applied before the real draw.
+  ctx.font = `${weight} ${fontPx}px ${TELUGU_CANVAS_FONT_FAMILY}`;
+  ctx.fillStyle = `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
+  ctx.textBaseline = "alphabetic";
+  ctx.fillText(text, 0, ascentPx);
+
+  return {
+    dataUrl: canvas.toDataURL("image/png"),
+    widthMm: widthPx * MM_PER_PX,
+    heightMm: heightPx * MM_PER_PX,
+    ascentMm: ascentPx * MM_PER_PX,
+  };
+}
+
+/** Measures how wide `text` would be if rendered by
+ * `renderTeluguRunToImage` at this font size, without drawing anything
+ * — used to truncate Telugu names to fit a column the same way
+ * `truncateToWidth` does for vector text, but against the *shaped*
+ * width (which can differ from jsPDF's naive per-glyph advance-width
+ * estimate for conjuncts). */
+function measureTeluguWidthMm(text: string, fontStyle: "normal" | "bold", fontSizePt: number): number {
+  const ctx = document.createElement("canvas").getContext("2d");
+  if (!ctx) return 0;
+  const weight = fontStyle === "bold" ? "700" : "400";
+  ctx.font = `${weight} ${fontSizePt * PX_PER_PT}px ${TELUGU_CANVAS_FONT_FAMILY}`;
+  return ctx.measureText(text).width * MM_PER_PX;
+}
+
+/** `truncateToWidth`'s counterpart for Telugu text rendered via
+ * canvas image instead of jsPDF vector text — same ellipsis-shrink
+ * approach, measured with `measureTeluguWidthMm` instead of
+ * `doc.getTextWidth`. */
+function truncateTeluguToWidth(
+  text: string,
+  fontStyle: "normal" | "bold",
+  fontSizePt: number,
+  maxWidthMm: number
+): string {
+  if (measureTeluguWidthMm(text, fontStyle, fontSizePt) <= maxWidthMm) return text;
+  let result = text;
+  while (result.length > 0 && measureTeluguWidthMm(`${result}…`, fontStyle, fontSizePt) > maxWidthMm) {
+    result = result.slice(0, -1);
+  }
+  return result ? `${result}…` : "…";
+}
+
+/** Draws a name resolved by `resolvePrintName` — left-aligned,
+ * truncated to `maxWidthMm` — as a properly-shaped Telugu image when
+ * the resolved font is Telugu and the canvas font is ready, or as
+ * normal vector text otherwise (English always takes this second
+ * path, unchanged from before). `y` is the text baseline, matching
+ * jsPDF's own `doc.text` convention. */
+function drawResolvedName(
+  doc: jsPDF,
+  resolved: { text: string; font: string },
+  x: number,
+  y: number,
+  fontStyle: "normal" | "bold",
+  fontSizePt: number,
+  maxWidthMm: number,
+  teluguCanvasReady: boolean,
+  color: [number, number, number] = [0, 0, 0]
+): void {
+  if (resolved.font === TELUGU_FONT_FAMILY && teluguCanvasReady) {
+    const truncated = truncateTeluguToWidth(resolved.text, fontStyle, fontSizePt, maxWidthMm);
+    const image = renderTeluguRunToImage(truncated, fontStyle, fontSizePt, color);
+    if (image) {
+      doc.addImage(image.dataUrl, "PNG", x, y - image.ascentMm, image.widthMm, image.heightMm);
+      return;
+    }
+  }
+  doc.setFont(resolved.font, fontStyle);
+  doc.setFontSize(fontSizePt);
+  doc.text(truncateToWidth(doc, resolved.text, maxWidthMm), x, y);
+}
+
 /** Splits text into runs of consecutive Telugu vs non-Telugu characters.
  * Needed because `resolveFreeTextFont` picks one font for the *whole*
  * string — fine for single-script fields, but a field an admin typed
@@ -94,11 +237,14 @@ function splitScriptRuns(text: string): { text: string; telugu: boolean }[] {
   return runs;
 }
 
-/** Draws single-line free text that may mix Telugu and Latin script,
- * switching fonts per run (see `splitScriptRuns`) instead of losing
- * whichever script the whole-string font doesn't cover. For
- * align: "center", the total width is measured across all runs first
- * so the combined text is still centered as one block. */
+/** Draws single-line free text that may mix Telugu and Latin script.
+ * Telugu runs are rendered as a properly-shaped image (see
+ * `renderTeluguRunToImage`) when the canvas font is ready — falling
+ * back to jsPDF's own (unshaped) Telugu vector font, then to
+ * Helvetica, if it isn't. Non-Telugu runs always draw as normal
+ * vector text. For align: "center", the total width is measured
+ * across all runs first so the combined text is still centered as one
+ * block. */
 function drawMixedScriptText(
   doc: jsPDF,
   text: string,
@@ -106,23 +252,46 @@ function drawMixedScriptText(
   y: number,
   fontStyle: "normal" | "bold",
   align: "center" | "left",
-  teluguFontReady: boolean
+  teluguFontReady: boolean,
+  teluguCanvasReady: boolean,
+  color: [number, number, number] = [0, 0, 0]
 ): void {
-  if (!teluguFontReady || !containsTelugu(text)) {
+  if ((!teluguFontReady && !teluguCanvasReady) || !containsTelugu(text)) {
     doc.setFont("helvetica", fontStyle);
     doc.text(text, x, y, { align });
     return;
   }
-  const runs = splitScriptRuns(text).map((run) => {
-    const font = run.telugu ? TELUGU_FONT_FAMILY : "helvetica";
+
+  const fontSizePt = doc.getFontSize();
+  type Run = { text: string; telugu: boolean; width: number } & (
+    | { kind: "image"; image: NonNullable<ReturnType<typeof renderTeluguRunToImage>> }
+    | { kind: "text"; font: string }
+  );
+  const runs: Run[] = splitScriptRuns(text).map((run) => {
+    if (run.telugu && teluguCanvasReady) {
+      const image = renderTeluguRunToImage(run.text, fontStyle, fontSizePt, color);
+      if (image) return { ...run, kind: "image", image, width: image.widthMm };
+    }
+    const font = run.telugu && teluguFontReady ? TELUGU_FONT_FAMILY : "helvetica";
     doc.setFont(font, fontStyle);
-    return { ...run, font, width: doc.getTextWidth(run.text) };
+    return { ...run, kind: "text", font, width: doc.getTextWidth(run.text) };
   });
   const totalWidth = runs.reduce((sum, r) => sum + r.width, 0);
   let cursorX = align === "center" ? x - totalWidth / 2 : x;
   for (const run of runs) {
-    doc.setFont(run.font, fontStyle);
-    doc.text(run.text, cursorX, y);
+    if (run.kind === "image") {
+      doc.addImage(
+        run.image.dataUrl,
+        "PNG",
+        cursorX,
+        y - run.image.ascentMm,
+        run.image.widthMm,
+        run.image.heightMm
+      );
+    } else {
+      doc.setFont(run.font, fontStyle);
+      doc.text(run.text, cursorX, y);
+    }
     cursorX += run.width;
   }
 }
@@ -300,7 +469,8 @@ function drawCopy(
   signatureLabel: string,
   borderWidth: number,
   useTelugu: boolean,
-  teluguFontReady: boolean
+  teluguFontReady: boolean,
+  teluguCanvasReady: boolean
 ) {
   const isCustomerBill = bill.bill_type === "CUSTOMER";
   const { date, time } = splitDateTime(bill.transaction_at);
@@ -310,7 +480,16 @@ function drawCopy(
   let cy = y0 + 7;
   doc.setFontSize(11);
   doc.setTextColor(0, 0, 0);
-  drawMixedScriptText(doc, opts.businessName, centerX, cy, "bold", "center", teluguFontReady);
+  drawMixedScriptText(
+    doc,
+    opts.businessName,
+    centerX,
+    cy,
+    "bold",
+    "center",
+    teluguFontReady,
+    teluguCanvasReady
+  );
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7);
@@ -324,7 +503,16 @@ function drawCopy(
     cy += 4;
     doc.setFontSize(9);
     doc.setTextColor(0, 0, 0);
-    drawMixedScriptText(doc, opts.proprietorName, centerX, cy, "bold", "center", teluguFontReady);
+    drawMixedScriptText(
+      doc,
+      opts.proprietorName,
+      centerX,
+      cy,
+      "bold",
+      "center",
+      teluguFontReady,
+      teluguCanvasReady
+    );
   }
   const phoneNumbers = [opts.businessPhone, opts.alternatePhone]
     .filter(Boolean)
@@ -376,10 +564,17 @@ function drawCopy(
       useTelugu,
       teluguFontReady
     );
-    doc.setFont(custName.font, "bold");
-    doc.setFontSize(8.5);
     const nameMaxWidth = COPY_W - PAD * 2 - 16;
-    doc.text(truncateToWidth(doc, custName.text, nameMaxWidth), x + PAD + 16, cy);
+    drawResolvedName(
+      doc,
+      custName,
+      x + PAD + 16,
+      cy,
+      "bold",
+      8.5,
+      nameMaxWidth,
+      teluguCanvasReady
+    );
     doc.setFont("helvetica", "normal");
     doc.setFontSize(7);
     cy += 3.6;
@@ -458,10 +653,19 @@ function drawCopy(
       useTelugu,
       teluguFontReady
     );
-    doc.setFont(itemName.font, "normal");
     const singleLineName = itemName.text.replace(/\s+/g, " ").trim();
-    doc.text(truncateToWidth(doc, singleLineName, itemColWidth), b1 + 1, rowTextY);
+    drawResolvedName(
+      doc,
+      { text: singleLineName, font: itemName.font },
+      b1 + 1,
+      rowTextY,
+      "normal",
+      7,
+      itemColWidth,
+      teluguCanvasReady
+    );
     doc.setFont("helvetica", "normal");
+    doc.setFontSize(7);
     const qtyText = `${line.quantity} ${line.unit}`;
     fitMoneyFontSize(doc, qtyText, b3 - b2 - 2, 7);
     doc.text(qtyText, b3 - 1, rowTextY, { align: "right" });
@@ -563,6 +767,10 @@ export async function generateBillPdf(bill: Bill, opts: BillPdfOptions): Promise
     containsTelugu(opts.businessAddress ?? "") ||
     containsTelugu(opts.proprietorName ?? "");
   const teluguFontReady = needsTeluguFont ? await ensureTeluguFont(doc) : false;
+  // Same condition as needsTeluguFont — anywhere the PDF would draw
+  // Telugu vector text, it now draws a properly-shaped canvas image
+  // instead (see drawResolvedName/drawMixedScriptText).
+  const teluguCanvasReady = needsTeluguFont ? await ensureTeluguCanvasFont() : false;
 
   const y0 = MARGIN_T;
   const naturalHeight = measureContentEnd(doc, bill, opts) + 4 + FOOTER_ZONE;
@@ -589,7 +797,8 @@ export async function generateBillPdf(bill: Bill, opts: BillPdfOptions): Promise
     "Receiver's Signature",
     0.5,
     useTelugu,
-    teluguFontReady
+    teluguFontReady,
+    teluguCanvasReady
   );
   drawCopy(
     doc,
@@ -601,7 +810,8 @@ export async function generateBillPdf(bill: Bill, opts: BillPdfOptions): Promise
     "Signature",
     1,
     useTelugu,
-    teluguFontReady
+    teluguFontReady,
+    teluguCanvasReady
   );
 
   doc.save(`${bill.bill_number}.pdf`);
