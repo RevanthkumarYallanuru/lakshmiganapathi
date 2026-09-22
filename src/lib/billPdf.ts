@@ -57,6 +57,9 @@ const MARGIN_T = 5;
 const GAP = 20;
 const COPY_W = (PAGE_W - MARGIN_L * 2 - GAP) / 2; // 85mm
 const MAX_H = PAGE_H * 0.6; // 178.2mm ceiling — a safety cap for long item lists, not a floor
+const MIN_TABLE_ROWS = 10; // item table always reserves at least this many ruled rows, so a
+// 1-2 item bill doesn't look like a tiny scrap next to a 9-item one — bills with more items
+// than this still grow to fit every line, this only stops the table shrinking below it
 const FOOTER_ZONE = 16; // signature line + label, banner included below
 const PAD = 4;
 const GREEN: [number, number, number] = [21, 128, 61];
@@ -160,9 +163,19 @@ function renderTeluguRunToImage(
  * — used to truncate Telugu names to fit a column the same way
  * `truncateToWidth` does for vector text, but against the *shaped*
  * width (which can differ from jsPDF's naive per-glyph advance-width
- * estimate for conjuncts). */
+ * estimate for conjuncts). Reuses one offscreen canvas/context across
+ * every call instead of allocating a new one each time — truncation
+ * can call this once per character trimmed, and a bill's item table
+ * calls it once per row, so a fresh canvas per call adds up. */
+let measureCtx: CanvasRenderingContext2D | null | undefined;
+function getMeasureCtx(): CanvasRenderingContext2D | null {
+  if (measureCtx === undefined) {
+    measureCtx = document.createElement("canvas").getContext("2d");
+  }
+  return measureCtx;
+}
 function measureTeluguWidthMm(text: string, fontStyle: "normal" | "bold", fontSizePt: number): number {
-  const ctx = document.createElement("canvas").getContext("2d");
+  const ctx = getMeasureCtx();
   if (!ctx) return 0;
   const weight = fontStyle === "bold" ? "700" : "400";
   ctx.font = `${weight} ${fontSizePt * PX_PER_PT}px ${TELUGU_CANVAS_FONT_FAMILY}`;
@@ -442,7 +455,7 @@ function measureContentEnd(doc: jsPDF, bill: Bill, opts: BillPdfOptions): number
   }
   cy += 1.5; // gap before table
   cy += 5; // table header row
-  cy += bill.bill_items.length * 4; // one gridded row per item
+  cy += Math.max(bill.bill_items.length, MIN_TABLE_ROWS) * 4; // one gridded row per item, minimum MIN_TABLE_ROWS
   cy += 3; // gap before totals (table's own bottom border closes it)
   if (Number(bill.discount) > 0) cy += 3.6;
   cy += 3.6; // grand total
@@ -607,8 +620,9 @@ function drawCopy(
   // not just a top/bottom rule.
   const headerH = 5;
   const rowH = 4;
+  const rowCount = Math.max(bill.bill_items.length, MIN_TABLE_ROWS);
   const tableTop = cy;
-  const tableBottom = tableTop + headerH + bill.bill_items.length * rowH;
+  const tableBottom = tableTop + headerH + rowCount * rowH;
   const b0 = x + PAD;
   const b1 = b0 + 8; // S.No | Item
   const b2 = b1 + 22; // Item | Quantity
@@ -625,7 +639,7 @@ function drawCopy(
   for (const bx of [b1, b2, b3, b4]) {
     doc.line(bx, tableTop, bx, tableBottom);
   }
-  for (let i = 1; i < bill.bill_items.length; i++) {
+  for (let i = 1; i < rowCount; i++) {
     const rowY = tableTop + headerH + i * rowH;
     doc.line(b0, rowY, b5, rowY);
   }

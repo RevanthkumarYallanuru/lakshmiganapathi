@@ -43,6 +43,22 @@ function ItemRow({ line, index }: { line: BillItem; index: number }) {
   );
 }
 
+/** Empty ruled row — pads the item table up to MIN_TABLE_ROWS so a
+ * 1-2 item bill doesn't look like a tiny scrap next to a full one, the
+ * same fixed-row-count treatment as the downloaded PDF. `&nbsp;` (not
+ * an empty string) keeps the row's height identical to a real one. */
+function BlankItemRow() {
+  return (
+    <tr>
+      <td style={cell}>&nbsp;</td>
+      <td style={cell}>&nbsp;</td>
+      <td style={cell}>&nbsp;</td>
+      <td style={cell}>&nbsp;</td>
+      <td style={cell}>&nbsp;</td>
+    </tr>
+  );
+}
+
 const cell: CSSProperties = {
   padding: "2px 3px",
   verticalAlign: "top",
@@ -52,11 +68,14 @@ const cell: CSSProperties = {
 // A4 portrait: 210mm x 297mm. Layout measurements per requirement:
 // 10mm left/right margin, 5mm top margin, 20mm gap between the two
 // copies (with a dotted cut line centered in it). Box height is
-// purely content-driven — it hugs short bills instead of leaving a
+// otherwise content-driven — it hugs short bills instead of leaving a
 // blank gap below the totals — with a ceiling only, as a safety cap
-// for bills with many items.
+// for bills with many items. The one fixed part is the item table
+// itself (see MIN_TABLE_ROWS), so a 1-2 item bill doesn't look like a
+// tiny scrap next to a full one.
 const COPY_WIDTH_MM = 85; // (210 - 10*2 - 20) / 2
 const MAX_HEIGHT_MM = 178.2; // 60% of 297mm
+const MIN_TABLE_ROWS = 10; // item table always shows at least this many ruled rows
 
 /** One physical copy of the bill — rendered twice (customer/original
  * and office copies) with identical transaction data, per the
@@ -196,6 +215,11 @@ function BillCopy({
         <tbody>
           {bill.bill_items.map((line, index) => (
             <ItemRow key={line.id} line={line} index={index} />
+          ))}
+          {Array.from({
+            length: Math.max(0, MIN_TABLE_ROWS - bill.bill_items.length),
+          }).map((_, index) => (
+            <BlankItemRow key={`blank-${index}`} />
           ))}
         </tbody>
       </table>

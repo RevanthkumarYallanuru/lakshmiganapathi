@@ -32,7 +32,7 @@ export function Header() {
           >
             <Menu className="h-5 w-5" aria-hidden />
           </button>
-          <span className="text-sm font-semibold text-slate-900 md:hidden">
+          <span className="max-w-[10rem] truncate text-sm font-semibold text-slate-900 md:hidden">
             {t("app.name")}
           </span>
         </div>
