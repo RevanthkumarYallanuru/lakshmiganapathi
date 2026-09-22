@@ -75,7 +75,7 @@ const cell: CSSProperties = {
 // tiny scrap next to a full one.
 const COPY_WIDTH_MM = 85; // (210 - 10*2 - 20) / 2
 const MAX_HEIGHT_MM = 178.2; // 60% of 297mm
-const MIN_TABLE_ROWS = 10; // item table always shows at least this many ruled rows
+const MIN_TABLE_ROWS = 13; // item table always shows at least this many ruled rows
 
 /** One physical copy of the bill — rendered twice (customer/original
  * and office copies) with identical transaction data, per the

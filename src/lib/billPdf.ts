@@ -57,7 +57,7 @@ const MARGIN_T = 5;
 const GAP = 20;
 const COPY_W = (PAGE_W - MARGIN_L * 2 - GAP) / 2; // 85mm
 const MAX_H = PAGE_H * 0.6; // 178.2mm ceiling — a safety cap for long item lists, not a floor
-const MIN_TABLE_ROWS = 10; // item table always reserves at least this many ruled rows, so a
+const MIN_TABLE_ROWS = 13; // item table always reserves at least this many ruled rows, so a
 // 1-2 item bill doesn't look like a tiny scrap next to a 9-item one — bills with more items
 // than this still grow to fit every line, this only stops the table shrinking below it
 const FOOTER_ZONE = 16; // signature line + label, banner included below
