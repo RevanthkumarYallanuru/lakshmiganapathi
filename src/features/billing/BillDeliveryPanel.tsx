@@ -10,7 +10,13 @@ import {
   reassignDeliveryAgent,
 } from "@/api/endpoints/deliveries";
 import { queryKeys } from "@/api/queryKeys";
-import { Button, Select, useToast } from "@/components/ui";
+import { Button, useToast } from "@/components/ui";
+import {
+  AgentPicker,
+  agentSelectionToPayload,
+  EMPTY_AGENT_SELECTION,
+  type AgentSelection,
+} from "@/features/shared/AgentPicker";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 /** Assign/change the delivery agent for a customer bill — from bill
@@ -23,7 +29,7 @@ export function BillDeliveryPanel({ billId }: { billId: string }) {
   const queryClient = useQueryClient();
 
   const [editing, setEditing] = useState(false);
-  const [agentId, setAgentId] = useState("");
+  const [agentSelection, setAgentSelection] = useState<AgentSelection>(EMPTY_AGENT_SELECTION);
 
   const { data: delivery, isLoading } = useQuery({
     queryKey: queryKeys.deliveries.byBill(billId),
@@ -38,10 +44,15 @@ export function BillDeliveryPanel({ billId }: { billId: string }) {
   const agents = agentsData?.data ?? [];
 
   const mutation = useMutation({
-    mutationFn: () =>
-      delivery
-        ? reassignDeliveryAgent(delivery.id, agentId || null)
-        : assignDelivery({ bill_id: billId, delivery_agent_id: agentId || undefined }),
+    mutationFn: () => {
+      const payload = agentSelectionToPayload(agentSelection);
+      return delivery
+        ? reassignDeliveryAgent(delivery.id, {
+            delivery_agent_id: payload.delivery_agent_id ?? null,
+            temp_agent_name: payload.temp_agent_name ?? null,
+          })
+        : assignDelivery({ bill_id: billId, ...payload });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.deliveries.byBill(billId) });
       toast({ variant: "success", title: t("billing.agentUpdateSuccess") });
@@ -57,18 +68,15 @@ export function BillDeliveryPanel({ billId }: { billId: string }) {
 
   if (isLoading) return null;
 
+  const currentAgentLabel = delivery?.delivery_agents?.name ?? delivery?.temp_agent_name;
+
   return (
     <div className="print-hide flex items-center gap-3 rounded-control border border-slate-200 bg-white px-4 py-3 text-sm">
       <Truck className="h-4 w-4 shrink-0 text-slate-400" aria-hidden />
       <span className="text-slate-500">{t("billing.deliveryAgent")}:</span>
       {editing ? (
         <div className="flex flex-1 flex-wrap items-center gap-2">
-          <Select
-            value={agentId}
-            onValueChange={setAgentId}
-            placeholder={t("billing.notAssigned")}
-            options={agents.map((agent) => ({ value: agent.id, label: agent.name }))}
-          />
+          <AgentPicker agents={agents} value={agentSelection} onChange={setAgentSelection} />
           <Button size="sm" onClick={() => mutation.mutate()} loading={mutation.isPending}>
             {t("common.save")}
           </Button>
@@ -79,18 +87,24 @@ export function BillDeliveryPanel({ billId }: { billId: string }) {
       ) : (
         <>
           <span className="font-medium text-slate-800">
-            {delivery?.delivery_agents?.name ?? t("billing.notAssigned")}
+            {currentAgentLabel ?? t("billing.notAssigned")}
           </span>
           <Button
             size="sm"
             variant="ghost"
             className="ml-auto"
             onClick={() => {
-              setAgentId(delivery?.delivery_agent_id ?? "");
+              setAgentSelection(
+                delivery?.delivery_agent_id
+                  ? { mode: "existing", agentId: delivery.delivery_agent_id, tempName: "" }
+                  : delivery?.temp_agent_name
+                    ? { mode: "temporary", agentId: "", tempName: delivery.temp_agent_name }
+                    : EMPTY_AGENT_SELECTION
+              );
               setEditing(true);
             }}
           >
-            {delivery?.delivery_agents ? t("billing.changeAgent") : t("billing.assignAgent")}
+            {currentAgentLabel ? t("billing.changeAgent") : t("billing.assignAgent")}
           </Button>
         </>
       )}

@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 
 import { ApiError } from "@/api/client";
 import { createBill } from "@/api/endpoints/billing";
 import { assignDelivery, listDeliveryAgents } from "@/api/endpoints/deliveries";
+import { getCustomer } from "@/api/endpoints/customers";
 import { getCustomerBalance } from "@/api/endpoints/ledger";
 import { queryKeys } from "@/api/queryKeys";
 import {
@@ -22,6 +23,12 @@ import {
   isWeightVariable,
   type BillLineDraft,
 } from "@/features/billing/billTypes";
+import {
+  AgentPicker,
+  agentSelectionToPayload,
+  EMPTY_AGENT_SELECTION,
+  type AgentSelection,
+} from "@/features/shared/AgentPicker";
 import { CustomerPicker } from "@/features/shared/CustomerPicker";
 import { ItemPicker } from "@/features/shared/ItemPicker";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -41,6 +48,11 @@ export function BillNewPage() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
+  // Set only once, from the Customer Profile "Make Bill" entry point —
+  // after that the admin drives customer selection entirely through
+  // CustomerPicker, same as the Bills -> New Bill flow.
+  const preselectCustomerId = searchParams.get("customerId");
 
   const [billType, setBillType] = useState<BillType>("CUSTOMER");
   const [customer, setCustomer] = useState<Customer | null>(null);
@@ -49,8 +61,24 @@ export function BillNewPage() {
   const [amountPaid, setAmountPaid] = useState("0");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | "">("");
   const [notes, setNotes] = useState("");
-  const [deliveryAgentId, setDeliveryAgentId] = useState("");
+  const [agentSelection, setAgentSelection] = useState<AgentSelection>(EMPTY_AGENT_SELECTION);
   const [formError, setFormError] = useState<string | null>(null);
+
+  const { data: preselectCustomerData } = useQuery({
+    queryKey: queryKeys.customers.detail(preselectCustomerId ?? ""),
+    queryFn: () => getCustomer(preselectCustomerId!),
+    enabled: !!preselectCustomerId,
+  });
+
+  useEffect(() => {
+    if (preselectCustomerData) {
+      setBillType("CUSTOMER");
+      setCustomer(preselectCustomerData);
+    }
+    // Only reacts to the preselect query resolving — deliberately not
+    // re-running on `customer`, so it never overwrites a customer the
+    // admin has since picked or changed themselves.
+  }, [preselectCustomerData]);
 
   const { data: agentsData } = useQuery({
     queryKey: queryKeys.deliveryAgents.list(),
@@ -130,7 +158,7 @@ export function BillNewPage() {
       if (billType === "CUSTOMER") {
         assignDelivery({
           bill_id: bill.id,
-          delivery_agent_id: deliveryAgentId || undefined,
+          ...agentSelectionToPayload(agentSelection),
         }).catch(() => {});
       }
       toast({ variant: "success", title: t("billing.createSuccess") });
@@ -272,16 +300,11 @@ export function BillNewPage() {
               onChange={setCustomer}
               label={t("billing.customer")}
             />
-            <Select
+            <AgentPicker
               label={t("billing.assignDeliveryAgent")}
-              optional
-              value={deliveryAgentId}
-              onValueChange={setDeliveryAgentId}
-              placeholder={t("billing.notAssigned")}
-              options={agents.map((agent) => ({
-                value: agent.id,
-                label: agent.name,
-              }))}
+              agents={agents}
+              value={agentSelection}
+              onChange={setAgentSelection}
             />
           </div>
         ) : (

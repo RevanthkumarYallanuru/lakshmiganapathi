@@ -94,6 +94,7 @@ export async function getDeliveryByBill(
 export async function assignDelivery(input: {
   bill_id: string;
   delivery_agent_id?: string;
+  temp_agent_name?: string;
   notes?: string;
 }): Promise<Delivery> {
   const { data } = await api.post<ApiEnvelope<Delivery>>(
@@ -105,11 +106,11 @@ export async function assignDelivery(input: {
 
 export async function reassignDeliveryAgent(
   id: string,
-  deliveryAgentId: string | null
+  agent: { delivery_agent_id?: string | null; temp_agent_name?: string | null }
 ): Promise<Delivery> {
   const { data } = await api.patch<ApiEnvelope<Delivery>>(
     `/deliveries/${id}/agent`,
-    { delivery_agent_id: deliveryAgentId }
+    agent
   );
   return data.data;
 }

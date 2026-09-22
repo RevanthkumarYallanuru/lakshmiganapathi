@@ -24,6 +24,12 @@ import {
 } from "@/components/ui";
 import type { TableColumn } from "@/components/ui";
 import { DeliveryAgentsPanel } from "@/features/delivery/DeliveryAgentsPanel";
+import {
+  AgentPicker,
+  agentSelectionToPayload,
+  EMPTY_AGENT_SELECTION,
+  type AgentSelection,
+} from "@/features/shared/AgentPicker";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { usePagination } from "@/hooks/usePagination";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -68,7 +74,13 @@ function ReassignDialog({
   const { t } = useLanguage();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [agentId, setAgentId] = useState(delivery?.delivery_agent_id ?? "");
+  const [agentSelection, setAgentSelection] = useState<AgentSelection>(
+    delivery?.delivery_agent_id
+      ? { mode: "existing", agentId: delivery.delivery_agent_id, tempName: "" }
+      : delivery?.temp_agent_name
+        ? { mode: "temporary", agentId: "", tempName: delivery.temp_agent_name }
+        : EMPTY_AGENT_SELECTION
+  );
 
   const { data: agentsData } = useQuery({
     queryKey: queryKeys.deliveryAgents.list(),
@@ -78,8 +90,13 @@ function ReassignDialog({
   const agents = agentsData?.data ?? [];
 
   const mutation = useMutation({
-    mutationFn: () =>
-      reassignDeliveryAgent(delivery!.id, agentId || null),
+    mutationFn: () => {
+      const payload = agentSelectionToPayload(agentSelection);
+      return reassignDeliveryAgent(delivery!.id, {
+        delivery_agent_id: payload.delivery_agent_id ?? null,
+        temp_agent_name: payload.temp_agent_name ?? null,
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.deliveries.all() });
       toast({ variant: "success", title: t("delivery.reassignSuccess") });
@@ -103,12 +120,11 @@ function ReassignDialog({
       size="sm"
     >
       <div className="flex flex-col gap-4">
-        <Select
+        <AgentPicker
           label={t("delivery.agent")}
-          value={agentId}
-          onValueChange={setAgentId}
-          placeholder={t("delivery.notAssigned")}
-          options={agents.map((agent) => ({ value: agent.id, label: agent.name }))}
+          agents={agents}
+          value={agentSelection}
+          onChange={setAgentSelection}
         />
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
@@ -204,7 +220,8 @@ export function DeliveryPage() {
     {
       key: "agent",
       header: t("delivery.agent"),
-      render: (delivery) => delivery.delivery_agents?.name ?? t("delivery.unassigned"),
+      render: (delivery) =>
+        delivery.delivery_agents?.name ?? delivery.temp_agent_name ?? t("delivery.unassigned"),
     },
     {
       key: "status",

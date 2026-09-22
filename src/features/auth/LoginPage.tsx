@@ -30,8 +30,7 @@ export function LoginPage() {
   } = useForm<LoginForm>({ resolver: zodResolver(loginSchema) });
 
   if (isAuthenticated) {
-    const from =
-      (location.state as { from?: Location })?.from?.pathname ?? "/dashboard";
+    const from = (location.state as { from?: string })?.from ?? "/dashboard";
     return <Navigate to={from} replace />;
   }
 

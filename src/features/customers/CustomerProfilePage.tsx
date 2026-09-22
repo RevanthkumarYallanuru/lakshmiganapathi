@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, IndianRupee, Pencil, Wallet } from "lucide-react";
+import { ArrowLeft, IndianRupee, Pencil, Receipt, Wallet } from "lucide-react";
 
 import { ApiError } from "@/api/client";
 import { getCustomer, updateCustomer } from "@/api/endpoints/customers";
@@ -112,6 +112,13 @@ export function CustomerProfilePage() {
           {t("customers.back")}
         </button>
         <div className="flex gap-2">
+          <Button
+            size="sm"
+            onClick={() => navigate(`/billing/new?customerId=${customer.id}`)}
+          >
+            <Receipt className="h-3.5 w-3.5" aria-hidden />
+            {t("customers.makeBill")}
+          </Button>
           {hasRole("ADMIN") && (
             <Button
               variant="outline"

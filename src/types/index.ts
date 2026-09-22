@@ -224,6 +224,10 @@ export interface Delivery {
   id: string;
   bill_id: string;
   delivery_agent_id: string | null;
+  /** A one-off agent name (e.g. "Raju - Auto") not worth adding to
+   * the permanent Agents list — mutually exclusive with
+   * delivery_agent_id; both null means no agent assigned. */
+  temp_agent_name: string | null;
   status: DeliveryStatus;
   sent_at: string | null;
   reached_at: string | null;
