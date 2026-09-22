@@ -1,0 +1,304 @@
+/**
+ * Mirrors of the backend's JSON responses. IDs are strings (BigInt
+ * serialized), money fields are strings (Decimal serialized) — never
+ * parsed to number for storage, only formatted for display.
+ */
+
+export type UserRole = "ADMIN" | "STAFF";
+
+export interface AuthUser {
+  id: string;
+  business_id: string;
+  name: string;
+  username: string;
+  role: UserRole;
+}
+
+export type NameDisplayMode = "ENGLISH" | "TELUGU" | "BOTH";
+/** The printed bill/PDF can only show one language at a time (unlike
+ * the on-screen NameDisplayMode, which allows BOTH) — a separate,
+ * independently admin-controlled setting. */
+export type PrintLanguage = "ENGLISH" | "TELUGU";
+
+export interface AuthBusiness {
+  id: string;
+  name: string;
+  proprietor_name: string | null;
+  name_display_mode: NameDisplayMode;
+  print_language: PrintLanguage;
+  /** Free-text note printed near the bottom of the bill/PDF (e.g.
+   * payment terms) — admin-editable, same pattern as proprietor_name.
+   * Null means the app's own default note text is used instead. */
+  bill_note: string | null;
+  phone: string | null;
+  /** Second contact number, shown alongside `phone` in the bill
+   * header — both are admin-editable from Settings. */
+  alternate_phone: string | null;
+  address: string | null;
+  upi_id: string | null;
+  upi_phone: string | null;
+}
+
+export interface Customer {
+  id: string;
+  business_id: string;
+  customer_code: string;
+  english_name: string;
+  telugu_name: string | null;
+  phone: string | null;
+  alternate_phone: string | null;
+  place: string | null;
+  address: string | null;
+  notes: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Category {
+  id: string;
+  business_id: string;
+  name: string;
+  telugu_name: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ItemUnit {
+  id: string;
+  item_id: string;
+  unit: string;
+  standard_price: string;
+  is_default: boolean;
+  is_active: boolean;
+}
+
+export interface Item {
+  id: string;
+  business_id: string;
+  category_id: string | null;
+  item_code: string;
+  english_name: string;
+  telugu_name: string | null;
+  description: string | null;
+  is_active: boolean;
+  categories?: Category | null;
+  item_units?: ItemUnit[];
+  created_at: string;
+  updated_at: string;
+}
+
+export type BillType = "CUSTOMER" | "WALK_IN";
+export type BillStatus = "DRAFT" | "COMPLETED" | "CANCELLED";
+
+export interface BillItem {
+  id: string;
+  bill_id: string;
+  item_id: string;
+  item_unit_id: string | null;
+  item_name_snapshot: string;
+  unit: string;
+  quantity: string;
+  standard_rate: string;
+  actual_rate: string;
+  discount: string;
+  line_total: string;
+  /** The live item's Telugu name (item_name_snapshot is always
+   * English, captured at bill time) — used to print/PDF the item in
+   * Telugu when the business's print-language setting calls for it. */
+  items?: { telugu_name: string | null } | null;
+}
+
+export interface PaymentAllocation {
+  id: string;
+  payment_id: string;
+  bill_id: string;
+  allocated_amount: string;
+  payments?: Payment;
+  bills?: Bill;
+}
+
+export interface Bill {
+  id: string;
+  business_id: string;
+  bill_number: string;
+  customer_id: string | null;
+  bill_type: BillType;
+  status: BillStatus;
+  transaction_at: string;
+  customer_name_snapshot: string | null;
+  customer_phone_snapshot: string | null;
+  place_snapshot: string | null;
+  customer_address_snapshot: string | null;
+  subtotal: string;
+  discount: string;
+  grand_total: string;
+  previous_balance: string;
+  amount_paid: string;
+  current_bill_balance: string;
+  overall_balance: string;
+  notes: string | null;
+  bill_items: BillItem[];
+  customers?: Customer | null;
+  payment_allocations?: PaymentAllocation[];
+  created_at: string;
+  updated_at: string;
+}
+
+export type PaymentMethod =
+  | "CASH"
+  | "UPI"
+  | "BANK_TRANSFER"
+  | "CHEQUE"
+  | "OTHER";
+
+export interface Payment {
+  id: string;
+  business_id: string;
+  payment_number: string;
+  customer_id: string;
+  payment_at: string;
+  amount: string;
+  payment_method: PaymentMethod;
+  reference_number: string | null;
+  notes: string | null;
+  customers?: Customer;
+  payment_allocations?: PaymentAllocation[];
+  ledger_entries?: LedgerEntry[];
+  created_at: string;
+  updated_at: string;
+}
+
+export type LedgerEntryType = "SALE" | "PAYMENT" | "RETURN" | "ADJUSTMENT";
+
+export interface LedgerEntry {
+  id: string;
+  business_id: string;
+  customer_id: string;
+  entry_type: LedgerEntryType;
+  bill_id: string | null;
+  payment_id: string | null;
+  transaction_at: string;
+  debit: string;
+  credit: string;
+  balance_after: string;
+  description: string | null;
+  created_at: string;
+}
+
+export interface CustomerBalance {
+  customer_id: string;
+  balance: string;
+}
+
+export type DeliveryStatus =
+  | "GENERATED"
+  | "SENT"
+  | "REACHED"
+  | "BALANCE"
+  | "CLEARED";
+
+export interface DeliveryAgent {
+  id: string;
+  business_id: string;
+  name: string;
+  phone: string | null;
+  vehicle_number: string | null;
+  notes: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Delivery {
+  id: string;
+  bill_id: string;
+  delivery_agent_id: string | null;
+  status: DeliveryStatus;
+  sent_at: string | null;
+  reached_at: string | null;
+  cleared_at: string | null;
+  notes: string | null;
+  bills?: Bill;
+  delivery_agents?: DeliveryAgent | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DashboardData {
+  today: {
+    bills_count: number;
+    sales_total: string;
+    payments_count: number;
+    payments_total: string;
+  };
+  outstanding_total: string;
+  customers_count: number;
+  items_count: number;
+  recent_bills: Bill[];
+  recent_payments: Payment[];
+}
+
+export interface SalesReport {
+  range: { start: string; end: string };
+  summary: {
+    total_bills: number;
+    total_subtotal: string;
+    total_discount: string;
+    total_sales: string;
+    total_paid: string;
+  };
+  daily: {
+    date: string;
+    total_bills: number;
+    total_sales: string;
+    total_paid: string;
+  }[];
+}
+
+export interface PaymentsReport {
+  range: { start: string; end: string };
+  summary: { total_payments: number; total_amount: string };
+  by_method: { payment_method: PaymentMethod; count: number; total_amount: string }[];
+  daily: { date: string; total_payments: number; total_amount: string }[];
+}
+
+export interface OutstandingRow {
+  customer_id: string;
+  customer_code: string;
+  english_name: string;
+  telugu_name: string | null;
+  phone: string | null;
+  outstanding_balance: string;
+  last_transaction_at: string | null;
+}
+
+export interface ItemSalesReport {
+  range: { start: string; end: string };
+  items: {
+    item_id: string;
+    item_name: string;
+    unit: string;
+    bill_count: number;
+    total_quantity: string;
+    total_sales: string;
+  }[];
+}
+
+/** The envelope every backend response uses. */
+export interface ApiEnvelope<T> {
+  success: boolean;
+  message?: string;
+  data: T;
+  count?: number;
+  total?: number;
+  page?: number;
+  limit?: number;
+}
+
+export interface ApiErrorBody {
+  success: false;
+  message: string;
+  errors?: { field: string; message: string }[];
+}
