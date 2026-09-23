@@ -356,7 +356,7 @@ export function BillNewPage() {
             <input
               type="number"
               min="0"
-              step="0.01"
+              step="1"
               value={billDiscount}
               onChange={(event) => setBillDiscount(event.target.value)}
               className="h-10 rounded-control border border-slate-300 bg-white px-3 text-sm"
@@ -379,7 +379,7 @@ export function BillNewPage() {
             <input
               type="number"
               min="0"
-              step="0.01"
+              step="1"
               value={amountPaid}
               onChange={(event) => setAmountPaid(event.target.value)}
               className="h-10 rounded-control border border-slate-300 bg-white px-3 text-sm"

@@ -1,6 +1,7 @@
 import {
   BarChart3,
   BookOpen,
+  HandCoins,
   LayoutDashboard,
   Package,
   Receipt,
@@ -30,5 +31,6 @@ export const navItems: NavItem[] = [
   { to: "/ledger", labelKey: "nav.ledger", icon: BookOpen },
   { to: "/delivery", labelKey: "nav.delivery", icon: Truck },
   { to: "/reports", labelKey: "nav.reports", icon: BarChart3 },
+  { to: "/payables", labelKey: "nav.payables", icon: HandCoins },
   { to: "/settings", labelKey: "nav.settings", icon: Settings },
 ];

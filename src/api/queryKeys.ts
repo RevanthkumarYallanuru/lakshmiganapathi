@@ -63,4 +63,11 @@ export const queryKeys = {
       ["reports", "outstanding", params] as const,
     items: (params: unknown) => ["reports", "items", params] as const,
   },
+
+  payables: {
+    all: () => ["payables"] as const,
+    list: (params: unknown) => ["payables", "list", params] as const,
+    detail: (id: string) => ["payables", "detail", id] as const,
+    insights: (params: unknown) => ["payables", "insights", params] as const,
+  },
 };

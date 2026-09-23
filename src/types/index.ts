@@ -179,6 +179,49 @@ export interface Payment {
   updated_at: string;
 }
 
+/** "My Pays" — money the business owes to others (suppliers,
+ * transporters, etc.). Deliberately separate from Payment/LedgerEntry
+ * above: no relation to customers, bills, or the customer ledger. */
+export type PayableStatus = "PENDING" | "PARTIALLY_PAID" | "PAID";
+
+export interface PayablePayment {
+  id: string;
+  payable_id: string;
+  amount: string;
+  payment_date: string;
+  payment_method: PaymentMethod | null;
+  reference_number: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface Payable {
+  id: string;
+  business_id: string;
+  payee_name: string;
+  total_amount: string;
+  amount_paid: string;
+  reason: string;
+  status: PayableStatus;
+  paid_at: string | null;
+  payable_payments?: PayablePayment[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PayablesInsights {
+  range: { start: string; end: string };
+  count: number;
+  total_amount: string;
+  total_paid: string;
+  total_remaining: string;
+  by_status: {
+    PENDING: number;
+    PARTIALLY_PAID: number;
+    PAID: number;
+  };
+}
+
 export type LedgerEntryType = "SALE" | "PAYMENT" | "RETURN" | "ADJUSTMENT";
 
 export interface LedgerEntry {

@@ -73,6 +73,11 @@ const ReportsPage = lazy(() =>
     default: m.ReportsPage,
   }))
 );
+const PayablesPage = lazy(() =>
+  import("@/features/payables/PayablesPage").then((m) => ({
+    default: m.PayablesPage,
+  }))
+);
 
 function PageFallback() {
   return <LoadingState label="Loading..." />;
@@ -105,6 +110,7 @@ export function AppRouter() {
           <Route path="/ledger" element={<LedgerPage />} />
           <Route path="/delivery" element={<DeliveryPage />} />
           <Route path="/reports" element={<ReportsPage />} />
+          <Route path="/payables" element={<PayablesPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Route>
       </Route>

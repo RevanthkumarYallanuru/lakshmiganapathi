@@ -100,7 +100,7 @@ export function BillItemRow({
         <input
           type="number"
           min="0"
-          step={weightVariable ? "1" : "0.001"}
+          step="1"
           value={line.quantity}
           onChange={(event) => handleQuantityChange(event.target.value)}
           placeholder={t("billing.quantity")}
@@ -112,7 +112,7 @@ export function BillItemRow({
           <input
             type="number"
             min="0"
-            step="0.01"
+            step="1"
             value={line.actualRate}
             onChange={(event) => onChange({ actualRate: event.target.value })}
             placeholder={
@@ -131,7 +131,7 @@ export function BillItemRow({
         <input
           type="number"
           min="0"
-          step="0.01"
+          step="1"
           value={line.discount}
           onChange={(event) => onChange({ discount: event.target.value })}
           placeholder={t("billing.lineDiscount")}
@@ -170,7 +170,7 @@ export function BillItemRow({
                 <input
                   type="number"
                   min="0"
-                  step="0.001"
+                  step="0.01"
                   value={weight}
                   onChange={(event) => handleWeightChange(index, event.target.value)}
                   className="h-8 w-20 rounded-control border border-slate-300 bg-white px-2 text-sm"
