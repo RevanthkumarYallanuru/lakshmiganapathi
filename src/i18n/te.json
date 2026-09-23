@@ -37,6 +37,7 @@
   "common.today": "ఈ రోజు",
   "common.thisWeek": "ఈ వారం",
   "common.thisMonth": "ఈ నెల",
+  "common.allTime": "అన్ని సమయాలు",
   "common.customRange": "అనుకూల పరిధి",
   "common.from": "నుండి",
   "common.to": "వరకు",
@@ -432,5 +433,6 @@
   "payables.paidInFull": "పూర్తిగా చెల్లించారు",
   "payables.insights": "సారాంశం",
   "payables.balanceToPay": "చెల్లించవలసిన బ్యాలెన్స్",
-  "payables.totalPays": "మొత్తం చెల్లింపులు"
+  "payables.totalPays": "మొత్తం చెల్లింపులు",
+  "payables.payableDate": "చెల్లింపు తేదీ"
 }

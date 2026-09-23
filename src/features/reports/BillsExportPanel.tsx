@@ -7,12 +7,12 @@ import { Alert, Button, Card, Select, useToast } from "@/components/ui";
 import { useLanguage } from "@/contexts/LanguageContext";
 import type { TranslationKey } from "@/i18n";
 
-// Only the ranges this export was asked to support — a narrower list
-// than the full Reports range picker (no "year").
+// A narrower list than the full Reports range picker (no "year").
 const BILLS_RANGE_OPTIONS: { value: ReportRange; labelKey: TranslationKey }[] = [
   { value: "today", labelKey: "common.today" },
   { value: "week", labelKey: "common.thisWeek" },
   { value: "month", labelKey: "common.thisMonth" },
+  { value: "all", labelKey: "common.allTime" },
   { value: "custom", labelKey: "common.customRange" },
 ];
 

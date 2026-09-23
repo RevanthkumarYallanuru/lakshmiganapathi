@@ -37,6 +37,7 @@
   "common.today": "Today",
   "common.thisWeek": "This Week",
   "common.thisMonth": "This Month",
+  "common.allTime": "All Time",
   "common.customRange": "Custom Range",
   "common.from": "From",
   "common.to": "To",
@@ -432,5 +433,6 @@
   "payables.paidInFull": "Fully paid",
   "payables.insights": "Insights",
   "payables.balanceToPay": "Balance to Pay",
-  "payables.totalPays": "Total Pays"
+  "payables.totalPays": "Total Pays",
+  "payables.payableDate": "Payable Date"
 }

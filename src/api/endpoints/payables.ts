@@ -12,6 +12,9 @@ export interface CreatePayableInput {
   payee_name: string;
   total_amount: number;
   reason: string;
+  /** Plain "YYYY-MM-DD" from a native date input — the actual date of
+   * the expense, chosen manually (defaults to today in the form). */
+  payable_date?: string;
 }
 
 export interface RecordPayablePaymentInput {

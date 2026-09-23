@@ -16,6 +16,7 @@ const RANGE_OPTIONS: { value: ReportRange; labelKey: TranslationKey }[] = [
   { value: "week", labelKey: "common.thisWeek" },
   { value: "month", labelKey: "common.thisMonth" },
   { value: "year", labelKey: "dashboard.thisYear" },
+  { value: "all", labelKey: "common.allTime" },
   { value: "custom", labelKey: "common.customRange" },
 ];
 

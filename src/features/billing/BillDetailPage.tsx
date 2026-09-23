@@ -22,7 +22,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useLocalizedName } from "@/hooks/useLocalizedName";
 import { formatDate, formatMoney } from "@/lib/money";
-import { generateBillPdf } from "@/lib/billPdf";
 import type { BillItem } from "@/types";
 
 function ItemNameCell({ line }: { line: BillItem }) {
@@ -88,6 +87,10 @@ export function BillDetailPage() {
   async function handleDownloadPdf() {
     setDownloadingPdf(true);
     try {
+      // jsPDF + html2canvas are ~600KB combined — the largest
+      // dependencies in the app — so they're loaded on demand here
+      // instead of on every bill view.
+      const { generateBillPdf } = await import("@/lib/billPdf");
       await generateBillPdf(bill!, {
         businessName: business?.name ?? "Lakshmi Ganapathi Enterprises",
         businessPhone: business?.phone ?? null,

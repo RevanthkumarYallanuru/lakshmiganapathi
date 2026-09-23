@@ -9,7 +9,7 @@ import type {
   SalesReport,
 } from "@/types";
 
-export type ReportRange = "today" | "week" | "month" | "year" | "custom";
+export type ReportRange = "today" | "week" | "month" | "year" | "all" | "custom";
 
 export interface RangeParams {
   range: ReportRange;

@@ -5,6 +5,13 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useDiscardConfirm } from "@/hooks/useDiscardConfirm";
 import type { CreatePayableInput } from "@/api/endpoints/payables";
 
+function todayDateString(): string {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${now.getFullYear()}-${month}-${day}`;
+}
+
 export function PayableFormDialog({
   open,
   onOpenChange,
@@ -23,22 +30,28 @@ export function PayableFormDialog({
   const [payeeName, setPayeeName] = useState("");
   const [amount, setAmount] = useState("");
   const [reason, setReason] = useState("");
+  const [payableDate, setPayableDate] = useState(todayDateString());
 
   useEffect(() => {
     if (!open) {
       setPayeeName("");
       setAmount("");
       setReason("");
+      setPayableDate(todayDateString());
     }
   }, [open]);
 
-  const isDirty = !!payeeName.trim() || !!amount || !!reason.trim();
+  const isDirty =
+    !!payeeName.trim() ||
+    !!amount ||
+    !!reason.trim() ||
+    payableDate !== todayDateString();
   const { confirmOpen, setConfirmOpen, requestClose, confirmDiscard } =
     useDiscardConfirm(isDirty, onOpenChange);
 
   const numericAmount = Number(amount) || 0;
   const canSubmit =
-    !!payeeName.trim() && numericAmount > 0 && !!reason.trim();
+    !!payeeName.trim() && numericAmount > 0 && !!reason.trim() && !!payableDate;
 
   function handleSubmit() {
     if (!canSubmit) return;
@@ -46,6 +59,7 @@ export function PayableFormDialog({
       payee_name: payeeName.trim(),
       total_amount: numericAmount,
       reason: reason.trim(),
+      payable_date: payableDate,
     });
   }
 
@@ -72,6 +86,13 @@ export function PayableFormDialog({
             step="1"
             value={amount}
             onChange={(event) => setAmount(event.target.value)}
+          />
+
+          <Input
+            label={t("payables.payableDate")}
+            type="date"
+            value={payableDate}
+            onChange={(event) => setPayableDate(event.target.value)}
           />
 
           <div className="flex flex-col gap-1.5">

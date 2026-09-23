@@ -66,6 +66,13 @@ export function PayableDetailDialog({
           </p>
         </div>
 
+        <div>
+          <p className="text-xs text-slate-400">{t("payables.payableDate")}</p>
+          <p className="text-sm font-medium text-slate-800">
+            {formatDate(payable.payable_date)}
+          </p>
+        </div>
+
         <div className="grid grid-cols-3 gap-3 rounded-control border border-slate-200 p-3 text-center">
           <div>
             <p className="text-xs text-slate-400">{t("payables.originalAmount")}</p>

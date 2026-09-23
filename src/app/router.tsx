@@ -1,12 +1,17 @@
 import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 
-import { AppLayout } from "@/components/layout/AppLayout";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import { LoadingState } from "@/components/ui/Spinner";
 
 const LoginPage = lazy(() =>
   import("@/features/auth/LoginPage").then((m) => ({ default: m.LoginPage }))
+);
+// AppLayout pulls in MobileNav, which uses framer-motion + Radix Dialog
+// — lazy-loading it the same way every page below already is keeps
+// those out of the unauthenticated /login screen's critical path.
+const AppLayout = lazy(() =>
+  import("@/components/layout/AppLayout").then((m) => ({ default: m.AppLayout }))
 );
 const DashboardPage = lazy(() =>
   import("@/features/dashboard/DashboardPage").then((m) => ({
@@ -96,7 +101,13 @@ export function AppRouter() {
       />
 
       <Route element={<ProtectedRoute />}>
-        <Route element={<AppLayout />}>
+        <Route
+          element={
+            <Suspense fallback={<PageFallback />}>
+              <AppLayout />
+            </Suspense>
+          }
+        >
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/customers" element={<CustomersPage />} />

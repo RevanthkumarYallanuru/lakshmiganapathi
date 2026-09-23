@@ -19,7 +19,6 @@ import { PrintablePaymentReceipt } from "@/features/payments/PrintablePaymentRec
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { formatDate, formatMoney } from "@/lib/money";
-import { generatePaymentPdf } from "@/lib/paymentPdf";
 
 export function PaymentDetailDialog({
   paymentId,
@@ -48,6 +47,8 @@ export function PaymentDetailDialog({
       const previousBalance =
         balanceAfter !== null ? balanceAfter + Number(payment.amount) : null;
 
+      // Loaded on demand — see BillDetailPage's handleDownloadPdf for why.
+      const { generatePaymentPdf } = await import("@/lib/paymentPdf");
       await generatePaymentPdf(payment, {
         businessName: business?.name ?? "Lakshmi Ganapathi Enterprises",
         businessPhone: business?.phone ?? null,

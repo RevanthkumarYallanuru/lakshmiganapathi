@@ -202,6 +202,7 @@ export interface Payable {
   total_amount: string;
   amount_paid: string;
   reason: string;
+  payable_date: string;
   status: PayableStatus;
   paid_at: string | null;
   payable_payments?: PayablePayment[];

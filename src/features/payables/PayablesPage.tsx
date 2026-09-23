@@ -49,12 +49,11 @@ const STATUS_LABEL_KEY: Record<PayableStatus, TranslationKey> = {
   PAID: "payables.statusPaid",
 };
 
-// Only the ranges the "My Pays" insights were asked to support —
-// deliberately a narrower list than the full Reports range picker.
 const INSIGHTS_RANGE_OPTIONS: { value: ReportRange; labelKey: TranslationKey }[] = [
   { value: "today", labelKey: "common.today" },
   { value: "week", labelKey: "common.thisWeek" },
   { value: "month", labelKey: "common.thisMonth" },
+  { value: "all", labelKey: "common.allTime" },
   { value: "custom", labelKey: "common.customRange" },
 ];
 
@@ -192,6 +191,11 @@ export function PayablesPage() {
       render: ({ payable }) => (
         <span className="font-medium text-slate-800">{payable.payee_name}</span>
       ),
+    },
+    {
+      key: "payableDate",
+      header: t("payables.payableDate"),
+      render: ({ payable }) => formatDate(payable.payable_date),
     },
     {
       key: "amount",
