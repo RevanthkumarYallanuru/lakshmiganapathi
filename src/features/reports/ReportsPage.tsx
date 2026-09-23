@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { BarChart3 } from "lucide-react";
 
+import { BillsExportPanel } from "@/features/reports/BillsExportPanel";
 import { ItemsReportPanel } from "@/features/reports/ItemsReportPanel";
 import { OutstandingReportPanel } from "@/features/reports/OutstandingReportPanel";
 import { PaymentsReportPanel } from "@/features/reports/PaymentsReportPanel";
@@ -8,13 +9,14 @@ import { SalesReportPanel } from "@/features/reports/SalesReportPanel";
 import { useLanguage } from "@/contexts/LanguageContext";
 import type { TranslationKey } from "@/i18n";
 
-type ReportTab = "sales" | "payments" | "outstanding" | "items";
+type ReportTab = "sales" | "payments" | "outstanding" | "items" | "bills";
 
 const TABS: { value: ReportTab; labelKey: TranslationKey }[] = [
   { value: "sales", labelKey: "reports.sales" },
   { value: "payments", labelKey: "reports.payments" },
   { value: "outstanding", labelKey: "reports.outstanding" },
   { value: "items", labelKey: "reports.items" },
+  { value: "bills", labelKey: "reports.bills" },
 ];
 
 export function ReportsPage() {
@@ -54,6 +56,7 @@ export function ReportsPage() {
       {tab === "payments" && <PaymentsReportPanel />}
       {tab === "outstanding" && <OutstandingReportPanel />}
       {tab === "items" && <ItemsReportPanel />}
+      {tab === "bills" && <BillsExportPanel />}
     </div>
   );
 }

@@ -118,3 +118,11 @@ export async function exportItemSalesReport(
     "item-sales-report.xlsx"
   );
 }
+
+export async function exportBillsReport(params: RangeParams): Promise<void> {
+  await downloadFile(
+    "/reports/bills/export",
+    params as unknown as Record<string, string>,
+    "bills.xlsx"
+  );
+}
