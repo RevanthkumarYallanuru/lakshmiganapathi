@@ -60,7 +60,7 @@ function BlankItemRow() {
 }
 
 const cell: CSSProperties = {
-  padding: "2px 3px",
+  padding: "1px 3px",
   verticalAlign: "middle",
   border: "1px solid #9ca3af",
 };
@@ -73,11 +73,11 @@ const contentCell: CSSProperties = {
   fontWeight: 700,
 };
 
-// Row height is set explicitly (rather than left to padding+line-height,
-// as before) so the table body's total height stays exactly the same
-// now that it holds fewer, taller rows: 13 rows at the old ~14px
-// implicit row height ≈ 182px; 10 rows at 18.2px ≈ the same 182px.
-const rowHeight: CSSProperties = { height: "18.2px" };
+// Row height is set explicitly (rather than left to padding+line-height)
+// so the table body's total height stays fixed at the same ~182px
+// budget regardless of row count: 13 rows at the old ~14px implicit
+// row height ≈ 182px; 12 rows at 15.17px ≈ the same 182px.
+const rowHeight: CSSProperties = { height: "15.17px" };
 
 // A4 portrait: 210mm x 297mm. Layout measurements per requirement:
 // 10mm left/right margin, 5mm top margin, 20mm gap between the two
@@ -89,9 +89,9 @@ const rowHeight: CSSProperties = { height: "18.2px" };
 // tiny scrap next to a full one.
 const COPY_WIDTH_MM = 85; // (210 - 10*2 - 20) / 2
 const MAX_HEIGHT_MM = 178.2; // 60% of 297mm
-const MIN_TABLE_ROWS = 10; // item table always shows at least this many ruled rows
+const MIN_TABLE_ROWS = 12; // item table always shows at least this many ruled rows
 // (was 13; rows are now taller — see rowHeight below — so the table's
-// total height is unchanged, just fewer/bigger rows)
+// total height stays fixed, just a slightly different row count/height)
 
 /** One physical copy of the bill — rendered twice (customer/original
  * and office copies) with identical transaction data, per the
