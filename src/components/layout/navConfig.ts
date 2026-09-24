@@ -4,8 +4,10 @@ import {
   HandCoins,
   LayoutDashboard,
   Package,
+  PackagePlus,
   Receipt,
   Settings,
+  Store,
   Tags,
   Truck,
   Users,
@@ -32,5 +34,7 @@ export const navItems: NavItem[] = [
   { to: "/delivery", labelKey: "nav.delivery", icon: Truck },
   { to: "/reports", labelKey: "nav.reports", icon: BarChart3 },
   { to: "/payables", labelKey: "nav.payables", icon: HandCoins },
+  { to: "/suppliers", labelKey: "nav.suppliers", icon: Store },
+  { to: "/imports", labelKey: "nav.imports", icon: PackagePlus },
   { to: "/settings", labelKey: "nav.settings", icon: Settings },
 ];

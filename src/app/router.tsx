@@ -83,6 +83,21 @@ const PayablesPage = lazy(() =>
     default: m.PayablesPage,
   }))
 );
+const SuppliersPage = lazy(() =>
+  import("@/features/suppliers/SuppliersPage").then((m) => ({
+    default: m.SuppliersPage,
+  }))
+);
+const SupplierProfilePage = lazy(() =>
+  import("@/features/suppliers/SupplierProfilePage").then((m) => ({
+    default: m.SupplierProfilePage,
+  }))
+);
+const ImportsPage = lazy(() =>
+  import("@/features/imports/ImportsPage").then((m) => ({
+    default: m.ImportsPage,
+  }))
+);
 
 function PageFallback() {
   return <LoadingState label="Loading..." />;
@@ -122,6 +137,9 @@ export function AppRouter() {
           <Route path="/delivery" element={<DeliveryPage />} />
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/payables" element={<PayablesPage />} />
+          <Route path="/suppliers" element={<SuppliersPage />} />
+          <Route path="/suppliers/:id" element={<SupplierProfilePage />} />
+          <Route path="/imports" element={<ImportsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Route>
       </Route>

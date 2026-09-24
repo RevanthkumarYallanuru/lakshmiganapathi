@@ -52,7 +52,7 @@ export function PayablePaymentDialog({
     <Dialog
       open={open}
       onOpenChange={onOpenChange}
-      title={`${t("payables.makePayment")} — ${payable.payee_name}`}
+      title={`${t("payables.makePayment")} — ${payable.suppliers?.name}`}
       size="sm"
     >
       <div className="flex flex-col gap-4">

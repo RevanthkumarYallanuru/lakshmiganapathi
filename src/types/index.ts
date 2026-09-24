@@ -182,6 +182,28 @@ export interface Payment {
 /** "My Pays" — money the business owes to others (suppliers,
  * transporters, etc.). Deliberately separate from Payment/LedgerEntry
  * above: no relation to customers, bills, or the customer ledger. */
+export interface Supplier {
+  id: string;
+  business_id: string;
+  name: string;
+  telugu_name: string | null;
+  phone: string | null;
+  alternate_phone: string | null;
+  organization: string | null;
+  address: string | null;
+  notes: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SupplierBalance {
+  supplier_id: string;
+  total_payable: string;
+  total_paid: string;
+  balance: string;
+}
+
 export type PayableStatus = "PENDING" | "PARTIALLY_PAID" | "PAID";
 
 export interface PayablePayment {
@@ -198,14 +220,35 @@ export interface PayablePayment {
 export interface Payable {
   id: string;
   business_id: string;
-  payee_name: string;
+  supplier_id: string;
+  import_id: string | null;
   total_amount: string;
   amount_paid: string;
   reason: string;
   payable_date: string;
   status: PayableStatus;
   paid_at: string | null;
+  suppliers?: Supplier;
   payable_payments?: PayablePayment[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Import {
+  id: string;
+  business_id: string;
+  supplier_id: string;
+  item_id: string;
+  quantity: string;
+  unit: string;
+  amount: string;
+  paid_amount: string;
+  import_date: string;
+  notes: string | null;
+  created_by: string;
+  suppliers?: Supplier;
+  items?: Item;
+  payables?: Payable | null;
   created_at: string;
   updated_at: string;
 }

@@ -1,4 +1,5 @@
-import { IndianRupee } from "lucide-react";
+import { IndianRupee, Store } from "lucide-react";
+import { Link } from "react-router-dom";
 
 import { Badge, Button, Dialog } from "@/components/ui";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -51,8 +52,17 @@ export function PayableDetailDialog({
           <div>
             <p className="text-xs text-slate-400">{t("payables.toWhom")}</p>
             <p className="text-base font-semibold text-slate-900">
-              {payable.payee_name}
+              {payable.suppliers?.name}
             </p>
+            {payable.supplier_id && (
+              <Link
+                to={`/suppliers/${payable.supplier_id}`}
+                className="mt-0.5 inline-flex items-center gap-1 text-xs font-medium text-accent-600 hover:underline"
+              >
+                <Store className="h-3 w-3" aria-hidden />
+                {t("suppliers.viewProfile")}
+              </Link>
+            )}
           </div>
           <Badge tone={STATUS_TONE[payable.status]}>
             {t(STATUS_LABEL_KEY[payable.status])}

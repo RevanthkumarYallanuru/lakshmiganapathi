@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 
 import { Alert, Button, ConfirmDialog, Dialog, Input } from "@/components/ui";
+import { SupplierPicker } from "@/features/shared/SupplierPicker";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useDiscardConfirm } from "@/hooks/useDiscardConfirm";
 import type { CreatePayableInput } from "@/api/endpoints/payables";
+import type { Supplier } from "@/types";
 
 function todayDateString(): string {
   const now = new Date();
@@ -18,31 +20,41 @@ export function PayableFormDialog({
   onSubmit,
   isSubmitting,
   formError,
+  initialSupplier,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (values: CreatePayableInput) => void;
   isSubmitting: boolean;
   formError: string | null;
+  /** Pre-fills and locks the supplier when opened from a Supplier
+   * Profile's "New Pay" action — still shown as a normal picker chip,
+   * just already selected. */
+  initialSupplier?: Supplier | null;
 }) {
   const { t } = useLanguage();
 
-  const [payeeName, setPayeeName] = useState("");
+  const [supplier, setSupplier] = useState<Supplier | null>(
+    initialSupplier ?? null
+  );
   const [amount, setAmount] = useState("");
   const [reason, setReason] = useState("");
   const [payableDate, setPayableDate] = useState(todayDateString());
 
   useEffect(() => {
-    if (!open) {
-      setPayeeName("");
+    if (open) {
+      setSupplier(initialSupplier ?? null);
+    } else {
+      setSupplier(null);
       setAmount("");
       setReason("");
       setPayableDate(todayDateString());
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const isDirty =
-    !!payeeName.trim() ||
+    !!supplier ||
     !!amount ||
     !!reason.trim() ||
     payableDate !== todayDateString();
@@ -51,12 +63,12 @@ export function PayableFormDialog({
 
   const numericAmount = Number(amount) || 0;
   const canSubmit =
-    !!payeeName.trim() && numericAmount > 0 && !!reason.trim() && !!payableDate;
+    !!supplier && numericAmount > 0 && !!reason.trim() && !!payableDate;
 
   function handleSubmit() {
-    if (!canSubmit) return;
+    if (!canSubmit || !supplier) return;
     onSubmit({
-      payee_name: payeeName.trim(),
+      supplier_id: supplier.id,
       total_amount: numericAmount,
       reason: reason.trim(),
       payable_date: payableDate,
@@ -72,11 +84,10 @@ export function PayableFormDialog({
         size="md"
       >
         <div className="flex flex-col gap-4">
-          <Input
-            label={t("payables.name")}
-            placeholder={t("payables.namePlaceholder")}
-            value={payeeName}
-            onChange={(event) => setPayeeName(event.target.value)}
+          <SupplierPicker
+            label={t("suppliers.title")}
+            value={supplier}
+            onChange={setSupplier}
           />
 
           <Input

@@ -9,7 +9,7 @@ import type {
 } from "@/types";
 
 export interface CreatePayableInput {
-  payee_name: string;
+  supplier_id: string;
   total_amount: number;
   reason: string;
   /** Plain "YYYY-MM-DD" from a native date input — the actual date of
@@ -28,6 +28,7 @@ export interface RecordPayablePaymentInput {
 export interface ListPayablesParams {
   status?: PayableStatus;
   search?: string;
+  supplier_id?: string;
 }
 
 export async function listPayables(

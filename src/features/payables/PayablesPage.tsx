@@ -189,7 +189,9 @@ export function PayablesPage() {
       key: "toWhom",
       header: t("payables.toWhom"),
       render: ({ payable }) => (
-        <span className="font-medium text-slate-800">{payable.payee_name}</span>
+        <span className="font-medium text-slate-800">
+          {payable.suppliers?.name}
+        </span>
       ),
     },
     {

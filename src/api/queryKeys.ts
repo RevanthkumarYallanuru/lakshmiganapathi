@@ -70,4 +70,19 @@ export const queryKeys = {
     detail: (id: string) => ["payables", "detail", id] as const,
     insights: (params: unknown) => ["payables", "insights", params] as const,
   },
+
+  suppliers: {
+    all: () => ["suppliers"] as const,
+    list: (search?: string, activeOnly?: boolean) =>
+      ["suppliers", "list", search ?? "", !!activeOnly] as const,
+    detail: (id: string) => ["suppliers", "detail", id] as const,
+    balances: () => ["suppliers", "balances"] as const,
+    balance: (id: string) => ["suppliers", id, "balance"] as const,
+  },
+
+  imports: {
+    all: () => ["imports"] as const,
+    list: (params: unknown) => ["imports", "list", params] as const,
+    detail: (id: string) => ["imports", "detail", id] as const,
+  },
 };
