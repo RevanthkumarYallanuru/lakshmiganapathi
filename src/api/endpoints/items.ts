@@ -20,12 +20,15 @@ export async function listItems(params?: {
   search?: string;
   categoryId?: string;
   includeInactive?: boolean;
+  /** "name" = alphabetical (pickers); omitted = newest first. */
+  sort?: "name";
 }): Promise<ApiEnvelope<Item[]>> {
   const { data } = await api.get<ApiEnvelope<Item[]>>("/items", {
     params: {
       search: params?.search || undefined,
       categoryId: params?.categoryId || undefined,
       includeInactive: params?.includeInactive ? "true" : undefined,
+      sort: params?.sort,
     },
   });
   return data;

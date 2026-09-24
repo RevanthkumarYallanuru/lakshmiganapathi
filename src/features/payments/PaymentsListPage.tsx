@@ -5,6 +5,7 @@ import { Plus } from "lucide-react";
 import { ApiError } from "@/api/client";
 import {
   createPayment,
+  exportPayments,
   listPayments,
   type CreatePaymentInput,
   type ListPaymentsParams,
@@ -13,10 +14,13 @@ import { queryKeys } from "@/api/queryKeys";
 import {
   Badge,
   Button,
+  DateRangeFilter,
+  ExportButton,
   Pagination,
   SearchInput,
   Select,
   Table,
+  useDateRangeFilter,
   useToast,
 } from "@/components/ui";
 import type { TableColumn } from "@/components/ui";
@@ -47,6 +51,7 @@ export function PaymentsListPage() {
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search);
   const [method, setMethod] = useState<PaymentMethod | "">("");
+  const dateFilter = useDateRangeFilter("all");
 
   const [formOpen, setFormOpen] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -55,12 +60,14 @@ export function PaymentsListPage() {
   const params: ListPaymentsParams = {
     search: debouncedSearch || undefined,
     payment_method: method || undefined,
+    ...dateFilter.params,
   };
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: queryKeys.payments.list(params),
     queryFn: () => listPayments(params),
     placeholderData: keepPreviousData,
+    enabled: dateFilter.ready,
   });
 
   const payments = data?.data ?? [];
@@ -147,6 +154,11 @@ export function PaymentsListPage() {
           onValueChange={(value) => setMethod(value as PaymentMethod)}
           placeholder={t("billing.allTypes")}
           options={METHOD_OPTIONS}
+        />
+        <DateRangeFilter filter={dateFilter} />
+        <ExportButton
+          onExport={() => exportPayments(params)}
+          disabled={!dateFilter.ready}
         />
       </div>
 

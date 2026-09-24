@@ -6,11 +6,21 @@ import { Plus } from "lucide-react";
 import { ApiError } from "@/api/client";
 import {
   createImport,
+  exportImports,
   listImports,
   type CreateImportInput,
 } from "@/api/endpoints/imports";
 import { queryKeys } from "@/api/queryKeys";
-import { Badge, Button, Pagination, Table, useToast } from "@/components/ui";
+import {
+  Badge,
+  Button,
+  DateRangeFilter,
+  ExportButton,
+  Pagination,
+  Table,
+  useDateRangeFilter,
+  useToast,
+} from "@/components/ui";
 import type { TableColumn } from "@/components/ui";
 import { ImportFormDialog } from "@/features/imports/ImportFormDialog";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -36,9 +46,12 @@ export function ImportsPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
 
+  const dateFilter = useDateRangeFilter("all");
+
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: queryKeys.imports.list({}),
-    queryFn: () => listImports(),
+    queryKey: queryKeys.imports.list(dateFilter.params),
+    queryFn: () => listImports(dateFilter.params),
+    enabled: dateFilter.ready,
   });
 
   const imports = data?.data ?? [];
@@ -157,6 +170,14 @@ export function ImportsPage() {
           <Plus className="h-4 w-4" aria-hidden />
           {t("imports.new")}
         </Button>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <DateRangeFilter filter={dateFilter} />
+        <ExportButton
+          onExport={() => exportImports(dateFilter.params)}
+          disabled={!dateFilter.ready}
+        />
       </div>
 
       <div className="rounded-card border border-slate-200 bg-white p-2">

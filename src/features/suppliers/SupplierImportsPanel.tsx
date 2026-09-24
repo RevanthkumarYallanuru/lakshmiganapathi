@@ -1,8 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
 
-import { listImports } from "@/api/endpoints/imports";
+import { exportImports, listImports } from "@/api/endpoints/imports";
 import { queryKeys } from "@/api/queryKeys";
-import { Badge, Card, CardHeader, Table } from "@/components/ui";
+import {
+  Badge,
+  Card,
+  CardHeader,
+  DateRangeFilter,
+  ExportButton,
+  Table,
+  useDateRangeFilter,
+} from "@/components/ui";
 import type { TableColumn } from "@/components/ui";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useLocalizedName } from "@/hooks/useLocalizedName";
@@ -24,9 +32,13 @@ function ImportItemCell({ importRecord }: { importRecord: Import }) {
 export function SupplierImportsPanel({ supplierId }: { supplierId: string }) {
   const { t } = useLanguage();
 
+  const dateFilter = useDateRangeFilter("all");
+  const params = { supplier_id: supplierId, ...dateFilter.params };
+
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: queryKeys.imports.list({ supplier_id: supplierId }),
-    queryFn: () => listImports({ supplier_id: supplierId }),
+    queryKey: queryKeys.imports.list(params),
+    queryFn: () => listImports(params),
+    enabled: dateFilter.ready,
   });
 
   const imports = data?.data ?? [];
@@ -86,7 +98,18 @@ export function SupplierImportsPanel({ supplierId }: { supplierId: string }) {
 
   return (
     <Card>
-      <CardHeader title={t("imports.title")} />
+      <CardHeader
+        title={t("imports.title")}
+        action={
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <DateRangeFilter filter={dateFilter} />
+            <ExportButton
+              onExport={() => exportImports(params)}
+              disabled={!dateFilter.ready}
+            />
+          </div>
+        }
+      />
       <Table
         columns={columns}
         data={imports}

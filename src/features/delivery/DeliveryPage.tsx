@@ -4,6 +4,7 @@ import { Truck } from "lucide-react";
 
 import { ApiError } from "@/api/client";
 import {
+  exportDeliveries,
   listDeliveries,
   listDeliveryAgents,
   reassignDeliveryAgent,
@@ -15,11 +16,14 @@ import {
   Badge,
   Button,
   ConfirmDialog,
+  DateRangeFilter,
   Dialog,
+  ExportButton,
   Pagination,
   SearchInput,
   Select,
   Table,
+  useDateRangeFilter,
   useToast,
 } from "@/components/ui";
 import type { TableColumn } from "@/components/ui";
@@ -150,6 +154,7 @@ export function DeliveryPage() {
   const debouncedSearch = useDebouncedValue(search);
   const [status, setStatus] = useState<DeliveryStatus | "">("");
   const [agentFilter, setAgentFilter] = useState("");
+  const dateFilter = useDateRangeFilter("all");
 
   const [statusTarget, setStatusTarget] = useState<{
     delivery: Delivery;
@@ -168,13 +173,14 @@ export function DeliveryPage() {
     search: debouncedSearch || undefined,
     status: status || undefined,
     delivery_agent_id: agentFilter || undefined,
+    ...dateFilter.params,
   };
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: queryKeys.deliveries.list(params),
     queryFn: () => listDeliveries(params),
     placeholderData: keepPreviousData,
-    enabled: tab === "deliveries",
+    enabled: tab === "deliveries" && dateFilter.ready,
   });
 
   const deliveries = data?.data ?? [];
@@ -321,6 +327,11 @@ export function DeliveryPage() {
               onValueChange={setAgentFilter}
               placeholder={t("delivery.allAgents")}
               options={agents.map((agent) => ({ value: agent.id, label: agent.name }))}
+            />
+            <DateRangeFilter filter={dateFilter} />
+            <ExportButton
+              onExport={() => exportDeliveries(params)}
+              disabled={!dateFilter.ready}
             />
           </div>
 

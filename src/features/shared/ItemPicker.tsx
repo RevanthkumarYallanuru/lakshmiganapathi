@@ -29,12 +29,13 @@ export function ItemPicker({ onSelect }: { onSelect: (item: Item) => void }) {
   const debounced = useDebouncedValue(query);
 
   const { data } = useQuery({
-    queryKey: queryKeys.items.list({ search: debounced }),
-    queryFn: () => listItems({ search: debounced || undefined }),
+    queryKey: queryKeys.items.list({ search: debounced, sort: "name" }),
+    queryFn: () => listItems({ search: debounced || undefined, sort: "name" }),
     enabled: open,
   });
 
-  const results = (data?.data ?? []).slice(0, 20);
+  // Every match is shown (the list scrolls) — never a truncated slice.
+  const results = data?.data ?? [];
 
   return (
     <div className="relative flex flex-col gap-1.5" ref={containerRef}>

@@ -13,8 +13,10 @@ import {
   Button,
   Card,
   CardHeader,
+  DateRangeFilter,
   Select,
   Table,
+  useDateRangeFilter,
   useToast,
 } from "@/components/ui";
 import type { TableColumn } from "@/components/ui";
@@ -33,34 +35,43 @@ const entryTypeKey: Record<
 };
 
 function mergeSameMomentSaleAndPayment(entries: LedgerEntry[]): LedgerEntry[] {
-  const used = new Set<string>();
+  // Pair each SALE with the PAYMENT written at the same instant first,
+  // so the result doesn't depend on which of the two comes first in the
+  // list (newest-first puts the later-id PAYMENT ahead of its SALE).
+  const paymentForSale = new Map<string, LedgerEntry>();
+  const pairedPaymentIds = new Set<string>();
+
+  for (const entry of entries) {
+    if (entry.entry_type !== "SALE") continue;
+
+    const paidAtSale = entries.find(
+      (candidate) =>
+        candidate.entry_type === "PAYMENT" &&
+        !pairedPaymentIds.has(candidate.id) &&
+        candidate.transaction_at === entry.transaction_at
+    );
+
+    if (paidAtSale) {
+      paymentForSale.set(entry.id, paidAtSale);
+      pairedPaymentIds.add(paidAtSale.id);
+    }
+  }
+
   const result: LedgerEntry[] = [];
 
   for (const entry of entries) {
-    if (used.has(entry.id)) continue;
+    if (pairedPaymentIds.has(entry.id)) continue;
 
-    if (entry.entry_type === "SALE") {
-      const paidAtSale = entries.find(
-        (candidate) =>
-          candidate.entry_type === "PAYMENT" &&
-          !used.has(candidate.id) &&
-          candidate.transaction_at === entry.transaction_at
-      );
-
-      if (paidAtSale) {
-        used.add(entry.id);
-        used.add(paidAtSale.id);
-        result.push({
-          ...entry,
-          credit: paidAtSale.credit,
-          balance_after: paidAtSale.balance_after,
-        });
-        continue;
-      }
-    }
-
-    used.add(entry.id);
-    result.push(entry);
+    const paidAtSale = paymentForSale.get(entry.id);
+    result.push(
+      paidAtSale
+        ? {
+            ...entry,
+            credit: paidAtSale.credit,
+            balance_after: paidAtSale.balance_after,
+          }
+        : entry
+    );
   }
 
   return result;
@@ -74,6 +85,7 @@ export function CustomerLedgerPanel({ customerId }: { customerId: string }) {
   const { toast } = useToast();
   const [entryType, setEntryType] = useState<LedgerEntryType | "">("");
   const [exporting, setExporting] = useState(false);
+  const dateFilter = useDateRangeFilter("all");
 
   const { data: balance } = useQuery({
     queryKey: queryKeys.ledger.balance(customerId),
@@ -90,7 +102,11 @@ export function CustomerLedgerPanel({ customerId }: { customerId: string }) {
   });
   const allEntries = allEntriesData?.data ?? [];
 
-  const ledgerParams = { limit: 500, entry_type: entryType || undefined };
+  const ledgerParams = {
+    limit: 500,
+    entry_type: entryType || undefined,
+    ...dateFilter.params,
+  };
   const {
     data: ledgerData,
     isLoading,
@@ -99,6 +115,7 @@ export function CustomerLedgerPanel({ customerId }: { customerId: string }) {
   } = useQuery({
     queryKey: queryKeys.ledger.entries(customerId, ledgerParams),
     queryFn: () => getCustomerLedger(customerId, ledgerParams),
+    enabled: dateFilter.ready,
   });
 
   const rawEntries = ledgerData?.data ?? [];
@@ -237,7 +254,8 @@ export function CustomerLedgerPanel({ customerId }: { customerId: string }) {
         <CardHeader
           title={t("customers.transactionHistory")}
           action={
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <DateRangeFilter filter={dateFilter} />
               <Select
                 value={entryType}
                 onValueChange={(value) =>
@@ -259,7 +277,7 @@ export function CustomerLedgerPanel({ customerId }: { customerId: string }) {
                 size="sm"
                 onClick={handleExport}
                 loading={exporting}
-                disabled={entries.length === 0}
+                disabled={entries.length === 0 || !dateFilter.ready}
               >
                 <Download className="h-3.5 w-3.5" aria-hidden />
                 {t("common.export")}

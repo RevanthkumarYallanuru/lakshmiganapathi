@@ -1,3 +1,4 @@
+import { downloadFile } from "@/lib/download";
 import { api } from "@/api/client";
 import type { ApiEnvelope, StockMovement, StockTallyRow } from "@/types";
 
@@ -15,4 +16,8 @@ export async function getItemStockMovements(
     `/inventory/items/${itemId}/movements`
   );
   return data;
+}
+
+export async function exportStockTally(): Promise<void> {
+  await downloadFile("/inventory/tally/export", undefined, "stock-tally.xlsx");
 }

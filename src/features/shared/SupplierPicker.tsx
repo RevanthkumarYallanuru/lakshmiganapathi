@@ -70,7 +70,8 @@ export function SupplierPicker({
     enabled: open,
   });
 
-  const results = (data?.data ?? []).slice(0, 20);
+  // Every match is shown (the list scrolls) — never a truncated slice.
+  const results = data?.data ?? [];
 
   if (value) {
     return (

@@ -1,3 +1,5 @@
+import { downloadFile } from "@/lib/download";
+import type { ReportRange } from "@/api/endpoints/reports";
 import { api } from "@/api/client";
 import type { ApiEnvelope, Bill, BillStatus, BillType, PaymentMethod } from "@/types";
 
@@ -25,12 +27,13 @@ export interface CreateBillInput {
 }
 
 export interface ListBillsParams {
+  range?: ReportRange;
+  start_date?: string;
+  end_date?: string;
   customer_id?: string;
   bill_status?: BillStatus;
   bill_type?: BillType;
   search?: string;
-  start_date?: string;
-  end_date?: string;
 }
 
 export async function listBills(
@@ -66,4 +69,25 @@ export async function cancelBill(
     reason ? { reason } : {}
   );
   return data.data;
+}
+
+/** Excel export of COMPLETED bills for the same date range (and
+ * optionally one customer) as the list — reuses the Reports bills
+ * export, which needs an explicit range ("all" = no date limit). */
+export async function exportBills(params: {
+  range?: ReportRange;
+  start_date?: string;
+  end_date?: string;
+  customer_id?: string;
+}): Promise<void> {
+  await downloadFile(
+    "/reports/bills/export",
+    {
+      range: params.range ?? "all",
+      start_date: params.start_date,
+      end_date: params.end_date,
+      customer_id: params.customer_id,
+    },
+    "bills.xlsx"
+  );
 }

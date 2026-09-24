@@ -3,15 +3,22 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { Plus } from "lucide-react";
 
-import { listBills, type ListBillsParams } from "@/api/endpoints/billing";
+import {
+  exportBills,
+  listBills,
+  type ListBillsParams,
+} from "@/api/endpoints/billing";
 import { queryKeys } from "@/api/queryKeys";
 import {
   Badge,
   Button,
+  DateRangeFilter,
+  ExportButton,
   Pagination,
   SearchInput,
   Select,
   Table,
+  useDateRangeFilter,
 } from "@/components/ui";
 import type { TableColumn } from "@/components/ui";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
@@ -28,17 +35,20 @@ export function BillingListPage() {
   const debouncedSearch = useDebouncedValue(search);
   const [status, setStatus] = useState<BillStatus | "">("");
   const [type, setType] = useState<BillType | "">("");
+  const dateFilter = useDateRangeFilter("all");
 
   const params: ListBillsParams = {
     search: debouncedSearch || undefined,
     bill_status: status || undefined,
     bill_type: type || undefined,
+    ...dateFilter.params,
   };
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: queryKeys.bills.list(params),
     queryFn: () => listBills(params),
     placeholderData: keepPreviousData,
+    enabled: dateFilter.ready,
   });
 
   const bills = data?.data ?? [];
@@ -122,6 +132,11 @@ export function BillingListPage() {
             { value: "CUSTOMER", label: t("billing.customerBill") },
             { value: "WALK_IN", label: t("billing.walkInBill") },
           ]}
+        />
+        <DateRangeFilter filter={dateFilter} />
+        <ExportButton
+          onExport={() => exportBills(dateFilter.params)}
+          disabled={!dateFilter.ready}
         />
       </div>
 

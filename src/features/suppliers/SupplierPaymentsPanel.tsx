@@ -1,8 +1,18 @@
 import { useQuery } from "@tanstack/react-query";
 
-import { listSupplierPayments } from "@/api/endpoints/suppliers";
+import {
+  exportSupplierPayments,
+  listSupplierPayments,
+} from "@/api/endpoints/suppliers";
 import { queryKeys } from "@/api/queryKeys";
-import { Card, CardHeader, Table } from "@/components/ui";
+import {
+  Card,
+  CardHeader,
+  DateRangeFilter,
+  ExportButton,
+  Table,
+  useDateRangeFilter,
+} from "@/components/ui";
 import type { TableColumn } from "@/components/ui";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { formatDate, formatMoney } from "@/lib/money";
@@ -15,9 +25,14 @@ import type { SupplierPayment } from "@/types";
 export function SupplierPaymentsPanel({ supplierId }: { supplierId: string }) {
   const { t } = useLanguage();
 
+  const dateFilter = useDateRangeFilter("all");
+
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: queryKeys.suppliers.payments(supplierId),
-    queryFn: () => listSupplierPayments(supplierId),
+    // Keeps the payments(id) prefix so invalidating it still refreshes
+    // this list whatever range is selected.
+    queryKey: [...queryKeys.suppliers.payments(supplierId), dateFilter.params],
+    queryFn: () => listSupplierPayments(supplierId, dateFilter.params),
+    enabled: dateFilter.ready,
   });
 
   const payments = data?.data ?? [];
@@ -58,7 +73,18 @@ export function SupplierPaymentsPanel({ supplierId }: { supplierId: string }) {
 
   return (
     <Card>
-      <CardHeader title={t("suppliers.paymentHistory")} />
+      <CardHeader
+        title={t("suppliers.paymentHistory")}
+        action={
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <DateRangeFilter filter={dateFilter} />
+            <ExportButton
+              onExport={() => exportSupplierPayments(supplierId, dateFilter.params)}
+              disabled={!dateFilter.ready}
+            />
+          </div>
+        }
+      />
       <Table
         columns={columns}
         data={payments}

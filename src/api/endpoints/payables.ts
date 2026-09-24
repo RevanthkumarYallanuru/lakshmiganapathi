@@ -1,3 +1,4 @@
+import { downloadFile } from "@/lib/download";
 import { api } from "@/api/client";
 import type { RangeParams, ReportRange } from "@/api/endpoints/reports";
 import type {
@@ -76,4 +77,12 @@ export async function getPayablesInsights(
     { params }
   );
   return data.data;
+}
+
+export async function exportPayables(params?: ListPayablesParams): Promise<void> {
+  await downloadFile(
+    "/payables/export",
+    params as Record<string, string | undefined>,
+    "my-pays.xlsx"
+  );
 }

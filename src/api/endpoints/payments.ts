@@ -1,3 +1,5 @@
+import { downloadFile } from "@/lib/download";
+import type { ReportRange } from "@/api/endpoints/reports";
 import { api } from "@/api/client";
 import type { ApiEnvelope, Payment, PaymentMethod } from "@/types";
 
@@ -17,11 +19,12 @@ export interface CreatePaymentInput {
 }
 
 export interface ListPaymentsParams {
+  range?: ReportRange;
+  start_date?: string;
+  end_date?: string;
   customer_id?: string;
   payment_method?: PaymentMethod;
   search?: string;
-  start_date?: string;
-  end_date?: string;
 }
 
 export async function listPayments(
@@ -66,4 +69,12 @@ export async function cancelPayment(
     reason ? { reason } : {}
   );
   return data.data;
+}
+
+export async function exportPayments(params?: ListPaymentsParams): Promise<void> {
+  await downloadFile(
+    "/payments/export",
+    params as Record<string, string | undefined>,
+    "payments.xlsx"
+  );
 }

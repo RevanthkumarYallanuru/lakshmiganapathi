@@ -1,8 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
 
-import { listPayables } from "@/api/endpoints/payables";
+import { exportPayables, listPayables } from "@/api/endpoints/payables";
 import { queryKeys } from "@/api/queryKeys";
-import { Badge, Card, CardHeader, Table } from "@/components/ui";
+import {
+  Badge,
+  Card,
+  CardHeader,
+  DateRangeFilter,
+  ExportButton,
+  Table,
+  useDateRangeFilter,
+} from "@/components/ui";
 import type { TableColumn } from "@/components/ui";
 import { useLanguage } from "@/contexts/LanguageContext";
 import type { TranslationKey } from "@/i18n";
@@ -33,9 +41,13 @@ export function SupplierPayablesPanel({
 }) {
   const { t } = useLanguage();
 
+  const dateFilter = useDateRangeFilter("all");
+  const params = { supplier_id: supplierId, ...dateFilter.params };
+
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: queryKeys.payables.list({ supplier_id: supplierId }),
-    queryFn: () => listPayables({ supplier_id: supplierId }),
+    queryKey: queryKeys.payables.list(params),
+    queryFn: () => listPayables(params),
+    enabled: dateFilter.ready,
   });
 
   const payables = data?.data ?? [];
@@ -93,7 +105,18 @@ export function SupplierPayablesPanel({
 
   return (
     <Card>
-      <CardHeader title={t("suppliers.pays")} />
+      <CardHeader
+        title={t("suppliers.pays")}
+        action={
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <DateRangeFilter filter={dateFilter} />
+            <ExportButton
+              onExport={() => exportPayables(params)}
+              disabled={!dateFilter.ready}
+            />
+          </div>
+        }
+      />
       <Table
         columns={columns}
         data={payables}

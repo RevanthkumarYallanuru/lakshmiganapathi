@@ -1,4 +1,6 @@
 import { api } from "@/api/client";
+import type { ReportRange } from "@/api/endpoints/reports";
+import { downloadFile } from "@/lib/download";
 import type {
   ApiEnvelope,
   Supplier,
@@ -91,13 +93,32 @@ export interface SupplierBulkPaymentInput {
   payment_date?: string;
 }
 
+export interface SupplierPaymentsParams {
+  range?: ReportRange;
+  start_date?: string;
+  end_date?: string;
+}
+
 export async function listSupplierPayments(
-  id: string
+  id: string,
+  params?: SupplierPaymentsParams
 ): Promise<ApiEnvelope<SupplierPayment[]>> {
   const { data } = await api.get<ApiEnvelope<SupplierPayment[]>>(
-    `/suppliers/${id}/payments`
+    `/suppliers/${id}/payments`,
+    { params }
   );
   return data;
+}
+
+export async function exportSupplierPayments(
+  id: string,
+  params?: SupplierPaymentsParams
+): Promise<void> {
+  await downloadFile(
+    `/suppliers/${id}/payments/export`,
+    params as Record<string, string | undefined>,
+    "supplier-payments.xlsx"
+  );
 }
 
 export async function createSupplierBulkPayment(

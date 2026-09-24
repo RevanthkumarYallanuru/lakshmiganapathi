@@ -1,3 +1,5 @@
+import { downloadFile } from "@/lib/download";
+import type { ReportRange } from "@/api/endpoints/reports";
 import { api } from "@/api/client";
 import type { ApiEnvelope, Import } from "@/types";
 
@@ -13,6 +15,9 @@ export interface CreateImportInput {
 }
 
 export interface ListImportsParams {
+  range?: ReportRange;
+  start_date?: string;
+  end_date?: string;
   supplier_id?: string;
 }
 
@@ -35,4 +40,12 @@ export async function createImport(
 ): Promise<Import> {
   const { data } = await api.post<ApiEnvelope<Import>>("/imports", input);
   return data.data;
+}
+
+export async function exportImports(params?: ListImportsParams): Promise<void> {
+  await downloadFile(
+    "/imports/export",
+    params as Record<string, string | undefined>,
+    "imports.xlsx"
+  );
 }

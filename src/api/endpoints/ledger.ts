@@ -1,4 +1,5 @@
 import { api } from "@/api/client";
+import type { ReportRange } from "@/api/endpoints/reports";
 import { downloadFile } from "@/lib/download";
 import type {
   ApiEnvelope,
@@ -8,8 +9,10 @@ import type {
 } from "@/types";
 
 export interface LedgerParams {
+  range?: ReportRange;
   start_date?: string;
   end_date?: string;
+  order?: "asc" | "desc";
   entry_type?: LedgerEntryType;
   page?: number;
   limit?: number;

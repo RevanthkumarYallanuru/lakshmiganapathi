@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
-import { getStockTally } from "@/api/endpoints/inventory";
+import { exportStockTally, getStockTally } from "@/api/endpoints/inventory";
 import { queryKeys } from "@/api/queryKeys";
-import { Table } from "@/components/ui";
+import { ExportButton, Table } from "@/components/ui";
 import type { TableColumn } from "@/components/ui";
 import { StockMovementHistoryDialog } from "@/features/inventory/StockMovementHistoryDialog";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -81,6 +81,7 @@ export function InventoryPage() {
         <h1 className="text-lg font-semibold text-slate-900">
           {t("inventory.title")}
         </h1>
+        <ExportButton onExport={() => exportStockTally()} />
       </div>
 
       <div className="rounded-card border border-slate-200 bg-white p-2">

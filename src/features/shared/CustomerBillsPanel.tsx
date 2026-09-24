@@ -1,9 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 
-import { listBills } from "@/api/endpoints/billing";
+import { exportBills, listBills } from "@/api/endpoints/billing";
 import { queryKeys } from "@/api/queryKeys";
-import { Badge, Card, CardHeader, Table } from "@/components/ui";
+import {
+  Badge,
+  Card,
+  CardHeader,
+  DateRangeFilter,
+  ExportButton,
+  Table,
+  useDateRangeFilter,
+} from "@/components/ui";
 import type { TableColumn } from "@/components/ui";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { formatDate, formatMoney } from "@/lib/money";
@@ -26,14 +34,17 @@ export function CustomerBillsPanel({ customerId }: { customerId: string }) {
   const { t } = useLanguage();
   const navigate = useNavigate();
 
+  const dateFilter = useDateRangeFilter("all");
+  const params = { customer_id: customerId, ...dateFilter.params };
+
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: queryKeys.bills.list({ customer_id: customerId }),
-    queryFn: () => listBills({ customer_id: customerId }),
+    queryKey: queryKeys.bills.list(params),
+    queryFn: () => listBills(params),
+    enabled: dateFilter.ready,
   });
 
-  const bills = (data?.data ?? []).slice().sort(
-    (a, b) => new Date(b.transaction_at).getTime() - new Date(a.transaction_at).getTime()
-  );
+  // The API already returns newest first.
+  const bills = data?.data ?? [];
 
   const columns: TableColumn<Bill>[] = [
     {
@@ -88,7 +99,20 @@ export function CustomerBillsPanel({ customerId }: { customerId: string }) {
 
   return (
     <Card>
-      <CardHeader title={t("customers.bills")} />
+      <CardHeader
+        title={t("customers.bills")}
+        action={
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <DateRangeFilter filter={dateFilter} />
+            <ExportButton
+              onExport={() =>
+                exportBills({ customer_id: customerId, ...dateFilter.params })
+              }
+              disabled={!dateFilter.ready}
+            />
+          </div>
+        }
+      />
       <Table
         columns={columns}
         data={bills}

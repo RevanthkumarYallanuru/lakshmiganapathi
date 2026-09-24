@@ -9,7 +9,15 @@ import type {
   SalesReport,
 } from "@/types";
 
-export type ReportRange = "today" | "week" | "month" | "year" | "all" | "custom";
+export type ReportRange =
+  | "today"
+  | "last3days"
+  | "week"
+  | "last30days"
+  | "month"
+  | "year"
+  | "all"
+  | "custom";
 
 export interface RangeParams {
   range: ReportRange;

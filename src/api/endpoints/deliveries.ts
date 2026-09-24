@@ -1,3 +1,5 @@
+import { downloadFile } from "@/lib/download";
+import type { ReportRange } from "@/api/endpoints/reports";
 import { api } from "@/api/client";
 import type {
   ApiEnvelope,
@@ -55,11 +57,12 @@ export async function setDeliveryAgentActive(
 }
 
 export interface ListDeliveriesParams {
+  range?: ReportRange;
+  start_date?: string;
+  end_date?: string;
   status?: DeliveryStatus;
   delivery_agent_id?: string;
   search?: string;
-  start_date?: string;
-  end_date?: string;
 }
 
 export async function listDeliveries(
@@ -125,4 +128,12 @@ export async function updateDeliveryStatus(
     { status, notes }
   );
   return data.data;
+}
+
+export async function exportDeliveries(params?: ListDeliveriesParams): Promise<void> {
+  await downloadFile(
+    "/deliveries/export",
+    params as Record<string, string | undefined>,
+    "deliveries.xlsx"
+  );
 }

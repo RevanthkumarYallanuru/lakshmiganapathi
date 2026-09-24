@@ -23,6 +23,7 @@ import {
 } from "@/features/payments/PaymentFormDialog";
 import { CustomerBillsPanel } from "@/features/shared/CustomerBillsPanel";
 import { CustomerLedgerPanel } from "@/features/shared/CustomerLedgerPanel";
+import { CustomerPaymentsPanel } from "@/features/shared/CustomerPaymentsPanel";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useLocalizedName } from "@/hooks/useLocalizedName";
@@ -168,6 +169,8 @@ export function CustomerProfilePage() {
       </Card>
 
       <CustomerBillsPanel customerId={id} />
+
+      <CustomerPaymentsPanel customerId={id} />
 
       <CustomerLedgerPanel customerId={id} />
 
