@@ -57,9 +57,12 @@ const MARGIN_T = 5;
 const GAP = 20;
 const COPY_W = (PAGE_W - MARGIN_L * 2 - GAP) / 2; // 85mm
 const MAX_H = PAGE_H * 0.6; // 178.2mm ceiling — a safety cap for long item lists, not a floor
-const MIN_TABLE_ROWS = 13; // item table always reserves at least this many ruled rows, so a
+const MIN_TABLE_ROWS = 10; // item table always reserves at least this many ruled rows, so a
 // 1-2 item bill doesn't look like a tiny scrap next to a 9-item one — bills with more items
 // than this still grow to fit every line, this only stops the table shrinking below it
+// (was 13 rows at ROW_H=4mm; rows are now taller — see ROW_H below — so the reserved
+// table body height (10 * 5.2mm = 52mm) matches the old one (13 * 4mm = 52mm) exactly)
+const ROW_H = 5.2; // mm per item row (was 4mm at 13 rows)
 const FOOTER_ZONE = 16; // signature line + label, banner included below
 const PAD = 4;
 const GREEN: [number, number, number] = [21, 128, 61];
@@ -455,7 +458,7 @@ function measureContentEnd(doc: jsPDF, bill: Bill, opts: BillPdfOptions): number
   }
   cy += 1.5; // gap before table
   cy += 5; // table header row
-  cy += Math.max(bill.bill_items.length, MIN_TABLE_ROWS) * 4; // one gridded row per item, minimum MIN_TABLE_ROWS
+  cy += Math.max(bill.bill_items.length, MIN_TABLE_ROWS) * ROW_H; // one gridded row per item, minimum MIN_TABLE_ROWS
   cy += 3; // gap before totals (table's own bottom border closes it)
   if (Number(bill.discount) > 0) cy += 3.6;
   cy += 3.6; // grand total
@@ -619,7 +622,7 @@ function drawCopy(
   // x-positions) so real row/column separator lines can be drawn,
   // not just a top/bottom rule.
   const headerH = 5;
-  const rowH = 4;
+  const rowH = ROW_H;
   const rowCount = Math.max(bill.bill_items.length, MIN_TABLE_ROWS);
   const tableTop = cy;
   const tableBottom = tableTop + headerH + rowCount * rowH;
@@ -657,9 +660,14 @@ function drawCopy(
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7);
   const itemColWidth = b2 - b1 - 2;
+  // Item name/quantity/rate/amount are bold and a point larger than
+  // before (was 7pt normal) for readability in the now-taller rows;
+  // S.No is left as-is, unchanged.
+  const ITEM_ROW_FONT_SIZE = 8;
   for (const [index, line] of bill.bill_items.entries()) {
-    const rowTextY = tableTop + headerH + index * rowH + 3;
+    const rowTextY = tableTop + headerH + index * rowH + 3.6;
     doc.setFont("helvetica", "normal");
+    doc.setFontSize(7);
     doc.text(String(index + 1), b0 + 1, rowTextY);
     const itemName = resolvePrintName(
       line.item_name_snapshot,
@@ -673,21 +681,23 @@ function drawCopy(
       { text: singleLineName, font: itemName.font },
       b1 + 1,
       rowTextY,
-      "normal",
-      7,
+      "bold",
+      ITEM_ROW_FONT_SIZE,
       itemColWidth,
       teluguCanvasReady
     );
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(7);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(ITEM_ROW_FONT_SIZE);
     const qtyText = `${line.quantity} ${line.unit}`;
-    fitMoneyFontSize(doc, qtyText, b3 - b2 - 2, 7);
+    fitMoneyFontSize(doc, qtyText, b3 - b2 - 2, ITEM_ROW_FONT_SIZE);
     doc.text(qtyText, b3 - 1, rowTextY, { align: "right" });
+    doc.setFont("helvetica", "bold");
     const rateText = money(line.actual_rate);
-    fitMoneyFontSize(doc, rateText, b4 - b3 - 2, 7);
+    fitMoneyFontSize(doc, rateText, b4 - b3 - 2, ITEM_ROW_FONT_SIZE);
     doc.text(rateText, b4 - 1, rowTextY, { align: "right" });
+    doc.setFont("helvetica", "bold");
     const amountText = money(line.line_total);
-    fitMoneyFontSize(doc, amountText, b5 - b4 - 2, 7);
+    fitMoneyFontSize(doc, amountText, b5 - b4 - 2, ITEM_ROW_FONT_SIZE);
     doc.text(amountText, b5 - 1, rowTextY, { align: "right" });
     doc.setFontSize(7);
   }
