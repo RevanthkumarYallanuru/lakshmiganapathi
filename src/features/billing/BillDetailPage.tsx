@@ -136,8 +136,9 @@ export function BillDetailPage() {
           </Button>
           {bill.status === "COMPLETED" && (
             <Button
-              variant="outline"
+              variant="danger"
               size="sm"
+              style={{ color: "#000000" }}
               onClick={() => setCancelOpen(true)}
             >
               <XCircle className="h-3.5 w-3.5" aria-hidden />
