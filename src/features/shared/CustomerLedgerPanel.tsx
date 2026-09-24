@@ -4,8 +4,8 @@ import { Download } from "lucide-react";
 
 import {
   exportCustomerLedger,
+  getAllCustomerLedger,
   getCustomerBalance,
-  getCustomerLedger,
 } from "@/api/endpoints/ledger";
 import { queryKeys } from "@/api/queryKeys";
 import {
@@ -92,18 +92,7 @@ export function CustomerLedgerPanel({ customerId }: { customerId: string }) {
     queryFn: () => getCustomerBalance(customerId),
   });
 
-  // Stats always summarize the FULL history regardless of the type
-  // filter below — a separate, unfiltered fetch, so switching the
-  // filter to "Payment" doesn't make "Total Sales" look like zero.
-  const allEntriesParams = { limit: 500 };
-  const { data: allEntriesData } = useQuery({
-    queryKey: queryKeys.ledger.entries(customerId, allEntriesParams),
-    queryFn: () => getCustomerLedger(customerId, allEntriesParams),
-  });
-  const allEntries = allEntriesData?.data ?? [];
-
   const ledgerParams = {
-    limit: 500,
     entry_type: entryType || undefined,
     ...dateFilter.params,
   };
@@ -114,11 +103,11 @@ export function CustomerLedgerPanel({ customerId }: { customerId: string }) {
     refetch,
   } = useQuery({
     queryKey: queryKeys.ledger.entries(customerId, ledgerParams),
-    queryFn: () => getCustomerLedger(customerId, ledgerParams),
+    queryFn: () => getAllCustomerLedger(customerId, ledgerParams),
     enabled: dateFilter.ready,
   });
 
-  const rawEntries = ledgerData?.data ?? [];
+  const rawEntries = ledgerData ?? [];
 
   // A payment made at the moment of sale (not a later, separate
   // payment) gets its own SALE and PAYMENT ledger rows for correct
@@ -133,29 +122,11 @@ export function CustomerLedgerPanel({ customerId }: { customerId: string }) {
   const entries =
     entryType === "" ? mergeSameMomentSaleAndPayment(rawEntries) : rawEntries;
 
-  // Display-only summaries derived from the server's own ledger
-  // entries — the authoritative outstanding balance comes from the
-  // /balance endpoint above, never from this client-side sum. A
-  // reversal is a separate ADJUSTMENT entry (never mutates the
-  // original SALE/PAYMENT row), so it must be netted out of the
-  // matching bucket here, or "Total Sales - Total Payments" would
-  // stop matching the real Outstanding figure after any reversal.
-  const totalSales =
-    allEntries
-      .filter((entry) => entry.entry_type === "SALE")
-      .reduce((sum, entry) => sum + Number(entry.debit), 0) -
-    allEntries
-      .filter((entry) => entry.entry_type === "ADJUSTMENT" && entry.bill_id)
-      .reduce((sum, entry) => sum + Number(entry.credit), 0);
-  const totalPayments =
-    allEntries
-      .filter((entry) => entry.entry_type === "PAYMENT")
-      .reduce((sum, entry) => sum + Number(entry.credit), 0) -
-    allEntries
-      .filter(
-        (entry) => entry.entry_type === "ADJUSTMENT" && entry.payment_id
-      )
-      .reduce((sum, entry) => sum + Number(entry.debit), 0);
+  // Sales / Payments totals come from the server (summed over the whole
+  // ledger in the database), never from the entries loaded here — the
+  // filtered list below can be any subset without affecting the cards.
+  const totalSales = Number(balance?.total_sales ?? 0);
+  const totalPayments = Number(balance?.total_payments ?? 0);
 
   async function handleExport() {
     setExporting(true);

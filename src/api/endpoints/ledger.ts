@@ -29,6 +29,27 @@ export async function getCustomerLedger(
   return data;
 }
 
+/** Every ledger entry matching the filters, newest first — fetched page
+ * by page (the API caps a page at 500) until the server's own total is
+ * reached, so a long history is never cut off. */
+export async function getAllCustomerLedger(
+  customerId: string,
+  params?: Omit<LedgerParams, "page" | "limit">
+): Promise<LedgerEntry[]> {
+  const limit = 500;
+  const entries: LedgerEntry[] = [];
+
+  for (let page = 1; ; page++) {
+    const res = await getCustomerLedger(customerId, { ...params, page, limit });
+    entries.push(...res.data);
+
+    const total = res.total ?? entries.length;
+    if (res.data.length === 0 || entries.length >= total) break;
+  }
+
+  return entries;
+}
+
 export async function getCustomerBalance(
   customerId: string
 ): Promise<CustomerBalance> {

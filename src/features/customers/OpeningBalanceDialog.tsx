@@ -34,7 +34,7 @@ export function OpeningBalanceDialog({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.ledger.balance(customerId) });
       queryClient.invalidateQueries({
-        queryKey: queryKeys.ledger.entries(customerId, { limit: 500 }),
+        queryKey: queryKeys.ledger.allEntries(customerId),
       });
       toast({ variant: "success", title: t("customers.openingBalanceSuccess") });
       setAmount("");

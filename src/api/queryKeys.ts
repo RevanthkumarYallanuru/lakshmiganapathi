@@ -37,6 +37,10 @@ export const queryKeys = {
   },
 
   ledger: {
+    /** Prefix matching every entries query for one customer, whatever
+     * filters it was fetched with — use this to invalidate. */
+    allEntries: (customerId: string) =>
+      ["ledger", customerId, "entries"] as const,
     entries: (customerId: string, params: unknown) =>
       ["ledger", customerId, "entries", params] as const,
     balance: (customerId: string) =>

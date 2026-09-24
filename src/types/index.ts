@@ -344,6 +344,9 @@ export interface LedgerEntry {
 export interface CustomerBalance {
   customer_id: string;
   balance: string;
+  /** Totals over the customer's whole ledger, computed server-side. */
+  total_sales: string;
+  total_payments: string;
 }
 
 export type DeliveryStatus =
