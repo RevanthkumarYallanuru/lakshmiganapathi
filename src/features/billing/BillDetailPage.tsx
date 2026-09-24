@@ -101,6 +101,7 @@ export function BillDetailPage() {
         customerNameTelugu: bill!.customers?.telugu_name ?? null,
         printLanguage: business?.print_language ?? "ENGLISH",
         billNote: business?.bill_note?.trim() || t("billing.paymentTermsNote"),
+        billItemRowCount: business?.bill_item_row_count ?? 12,
       });
     } catch {
       toast({ variant: "error", title: t("common.errorGeneric") });

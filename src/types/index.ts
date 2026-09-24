@@ -37,6 +37,11 @@ export interface AuthBusiness {
   address: string | null;
   upi_id: string | null;
   upi_phone: string | null;
+  /** Item rows shown in the printed bill / downloaded PDF's item
+   * table — admin-editable from Settings, clamped 8–15. Row height is
+   * recomputed to keep the bill's total size fixed regardless of this
+   * value. */
+  bill_item_row_count: number;
 }
 
 export interface Customer {
@@ -214,6 +219,29 @@ export interface PayablePayment {
   payment_method: PaymentMethod | null;
   reference_number: string | null;
   notes: string | null;
+  /** Set only when this row is one payable's slice of a supplier bulk
+   * payment (see SupplierPayment) — null for an ordinary single-payable
+   * payment. */
+  supplier_payment_id: string | null;
+  created_at: string;
+}
+
+/** One bulk payment against a supplier — automatically allocated across
+ * its oldest unpaid/partially-paid payables first (FIFO). Each payable
+ * it touched has its own PayablePayment row (see supplier_payment_id)
+ * linked back here via `payable_payments`. */
+export interface SupplierPayment {
+  id: string;
+  business_id: string;
+  supplier_id: string;
+  amount: string;
+  payment_date: string;
+  reason: string;
+  payment_method: PaymentMethod | null;
+  reference_number: string | null;
+  notes: string | null;
+  suppliers?: Supplier;
+  payable_payments?: PayablePayment[];
   created_at: string;
 }
 

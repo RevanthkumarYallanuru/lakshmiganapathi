@@ -54,6 +54,10 @@ interface AuthContextValue {
    * the printed bill header. Updated together in one call since
    * they're edited from a single Settings form. */
   setContactNumbers: (phone: string, alternatePhone: string) => Promise<void>;
+  /** Admin-only: how many item rows the printed bill/PDF's item table
+   * shows (clamped 8–15 server-side). Row height is recomputed on the
+   * print/PDF side to keep the bill's total size fixed. */
+  setBillItemRowCount: (count: number) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -180,6 +184,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     []
   );
 
+  const setBillItemRowCount = useCallback(async (count: number) => {
+    const updated = await updateBusinessSettings({ bill_item_row_count: count });
+    setBusiness((prev) => {
+      const next = prev
+        ? { ...prev, bill_item_row_count: updated.bill_item_row_count }
+        : prev;
+      const session = getStoredSession();
+      if (session && next) {
+        setStoredSession({ ...session, business: next });
+      }
+      return next;
+    });
+  }, []);
+
   const value = useMemo(
     () => ({
       user,
@@ -195,6 +213,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setProprietorName,
       setBillNote,
       setContactNumbers,
+      setBillItemRowCount,
     }),
     [
       user,
@@ -209,6 +228,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setProprietorName,
       setBillNote,
       setContactNumbers,
+      setBillItemRowCount,
     ]
   );
 

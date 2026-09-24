@@ -78,6 +78,7 @@ export const queryKeys = {
     detail: (id: string) => ["suppliers", "detail", id] as const,
     balances: () => ["suppliers", "balances"] as const,
     balance: (id: string) => ["suppliers", id, "balance"] as const,
+    payments: (id: string) => ["suppliers", id, "payments"] as const,
   },
 
   imports: {

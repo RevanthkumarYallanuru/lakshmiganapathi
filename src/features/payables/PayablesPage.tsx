@@ -53,7 +53,17 @@ const INSIGHTS_RANGE_OPTIONS: { value: ReportRange; labelKey: TranslationKey }[]
   { value: "today", labelKey: "common.today" },
   { value: "week", labelKey: "common.thisWeek" },
   { value: "month", labelKey: "common.thisMonth" },
+  { value: "year", labelKey: "common.thisYear" },
   { value: "all", labelKey: "common.allTime" },
+  { value: "custom", labelKey: "common.customRange" },
+];
+
+const LIST_RANGE_OPTIONS: { value: ReportRange; labelKey: TranslationKey }[] = [
+  { value: "all", labelKey: "common.allTime" },
+  { value: "today", labelKey: "common.today" },
+  { value: "week", labelKey: "common.thisWeek" },
+  { value: "month", labelKey: "common.thisMonth" },
+  { value: "year", labelKey: "common.thisYear" },
   { value: "custom", labelKey: "common.customRange" },
 ];
 
@@ -100,6 +110,9 @@ export function PayablesPage() {
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search);
   const [status, setStatus] = useState<PayableStatus | "">("");
+  const [listRange, setListRange] = useState<ReportRange>("all");
+  const [listStartDate, setListStartDate] = useState("");
+  const [listEndDate, setListEndDate] = useState("");
 
   const [insightsRange, setInsightsRange] = useState<ReportRange>("today");
   const [insightsStartDate, setInsightsStartDate] = useState("");
@@ -131,12 +144,18 @@ export function PayablesPage() {
   const params: ListPayablesParams = {
     search: debouncedSearch || undefined,
     status: status || undefined,
+    range: listRange === "all" ? undefined : listRange,
+    ...(listRange === "custom" && {
+      start_date: listStartDate || undefined,
+      end_date: listEndDate || undefined,
+    }),
   };
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: queryKeys.payables.list(params),
     queryFn: () => listPayables(params),
     placeholderData: keepPreviousData,
+    enabled: listRange !== "custom" || (!!listStartDate && !!listEndDate),
   });
 
   const payables = data?.data ?? [];
@@ -372,6 +391,30 @@ export function PayablesPage() {
             { value: "PAID", label: t("payables.statusPaid") },
           ]}
         />
+        <Select
+          value={listRange}
+          onValueChange={(value) => setListRange(value as ReportRange)}
+          options={LIST_RANGE_OPTIONS.map((option) => ({
+            value: option.value,
+            label: t(option.labelKey),
+          }))}
+        />
+        {listRange === "custom" && (
+          <>
+            <input
+              type="date"
+              value={listStartDate}
+              onChange={(event) => setListStartDate(event.target.value)}
+              className="h-10 rounded-control border border-slate-300 bg-white px-2 text-sm"
+            />
+            <input
+              type="date"
+              value={listEndDate}
+              onChange={(event) => setListEndDate(event.target.value)}
+              className="h-10 rounded-control border border-slate-300 bg-white px-2 text-sm"
+            />
+          </>
+        )}
       </div>
 
       <div className="rounded-card border border-slate-200 bg-white p-2">

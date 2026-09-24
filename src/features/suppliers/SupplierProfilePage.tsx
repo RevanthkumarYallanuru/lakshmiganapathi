@@ -5,13 +5,14 @@ import { ArrowLeft, IndianRupee, Pencil, Plus } from "lucide-react";
 
 import { ApiError } from "@/api/client";
 import {
+  createSupplierBulkPayment,
   getSupplier,
   getSupplierBalance,
   updateSupplier,
+  type SupplierBulkPaymentInput,
 } from "@/api/endpoints/suppliers";
 import {
   createPayable,
-  listPayables,
   recordPayablePayment,
   type CreatePayableInput,
 } from "@/api/endpoints/payables";
@@ -20,7 +21,6 @@ import {
   Badge,
   Button,
   Card,
-  Dialog,
   ErrorState,
   LoadingState,
   useToast,
@@ -31,12 +31,14 @@ import {
   PayablePaymentDialog,
   type PayablePaymentSubmitValues,
 } from "@/features/payables/PayablePaymentDialog";
+import { SupplierBulkPaymentDialog } from "@/features/suppliers/SupplierBulkPaymentDialog";
 import { SupplierFormDialog } from "@/features/suppliers/SupplierFormDialog";
 import { SupplierImportsPanel } from "@/features/suppliers/SupplierImportsPanel";
 import { SupplierPayablesPanel } from "@/features/suppliers/SupplierPayablesPanel";
+import { SupplierPaymentsPanel } from "@/features/suppliers/SupplierPaymentsPanel";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useLocalizedName } from "@/hooks/useLocalizedName";
-import { formatDate, formatMoney } from "@/lib/money";
+import { formatMoney } from "@/lib/money";
 import type { Payable } from "@/types";
 
 function StatCard({
@@ -72,7 +74,8 @@ export function SupplierProfilePage() {
   const [editOpen, setEditOpen] = useState(false);
   const [createPayOpen, setCreatePayOpen] = useState(false);
   const [createPayError, setCreatePayError] = useState<string | null>(null);
-  const [payPickerOpen, setPayPickerOpen] = useState(false);
+  const [bulkPaymentOpen, setBulkPaymentOpen] = useState(false);
+  const [bulkPaymentError, setBulkPaymentError] = useState<string | null>(null);
   const [detailPayable, setDetailPayable] = useState<Payable | null>(null);
   const [paymentPayable, setPaymentPayable] = useState<Payable | null>(null);
   const [paymentError, setPaymentError] = useState<string | null>(null);
@@ -94,22 +97,10 @@ export function SupplierProfilePage() {
     enabled: !!id,
   });
 
-  // Same query key SupplierPayablesPanel uses below — React Query
-  // dedupes it into one shared request/cache entry, so this doesn't
-  // cost an extra fetch; it's just how "Make Payment" knows which
-  // payable(s) are still open without a separate endpoint.
-  const { data: payablesData } = useQuery({
-    queryKey: queryKeys.payables.list({ supplier_id: id }),
-    queryFn: () => listPayables({ supplier_id: id }),
-    enabled: !!id,
-  });
-  const openPayables = (payablesData?.data ?? []).filter(
-    (payable) => payable.status !== "PAID"
-  );
-
   function invalidateAll() {
     queryClient.invalidateQueries({ queryKey: queryKeys.suppliers.balance(id) });
     queryClient.invalidateQueries({ queryKey: queryKeys.suppliers.balances() });
+    queryClient.invalidateQueries({ queryKey: queryKeys.suppliers.payments(id) });
     queryClient.invalidateQueries({ queryKey: queryKeys.payables.all() });
     queryClient.invalidateQueries({ queryKey: queryKeys.imports.all() });
   }
@@ -162,19 +153,33 @@ export function SupplierProfilePage() {
     },
   });
 
+  const bulkPaymentMutation = useMutation({
+    mutationFn: (values: SupplierBulkPaymentInput) =>
+      createSupplierBulkPayment(id, values),
+    onSuccess: () => {
+      invalidateAll();
+      toast({ variant: "success", title: t("payables.paymentSuccess") });
+      setBulkPaymentOpen(false);
+      setBulkPaymentError(null);
+    },
+    onError: (error) => {
+      setBulkPaymentError(
+        error instanceof ApiError ? error.message : t("common.errorGeneric")
+      );
+    },
+  });
+
   const localizedName = useLocalizedName(
     supplier?.name ?? "",
     supplier?.telugu_name
   );
 
+  const hasBalance = Number(balance?.balance ?? 0) > 0;
+
   function handleMakePaymentClick() {
-    if (openPayables.length === 0) return;
-    setPaymentError(null);
-    if (openPayables.length === 1) {
-      setPaymentPayable(openPayables[0]);
-    } else {
-      setPayPickerOpen(true);
-    }
+    if (!hasBalance) return;
+    setBulkPaymentError(null);
+    setBulkPaymentOpen(true);
   }
 
   if (supplierLoading) {
@@ -208,7 +213,7 @@ export function SupplierProfilePage() {
             <Plus className="h-3.5 w-3.5" aria-hidden />
             {t("suppliers.newPay")}
           </Button>
-          {openPayables.length > 0 && (
+          {hasBalance && (
             <Button variant="outline" size="sm" onClick={handleMakePaymentClick}>
               <IndianRupee className="h-3.5 w-3.5" aria-hidden />
               {t("payables.makePayment")}
@@ -265,6 +270,8 @@ export function SupplierProfilePage() {
 
       <SupplierImportsPanel supplierId={id} />
 
+      <SupplierPaymentsPanel supplierId={id} />
+
       <SupplierFormDialog
         open={editOpen}
         onOpenChange={setEditOpen}
@@ -310,46 +317,18 @@ export function SupplierProfilePage() {
         }}
       />
 
-      <Dialog
-        open={payPickerOpen}
-        onOpenChange={setPayPickerOpen}
-        title={t("suppliers.choosePayable")}
-        size="sm"
-      >
-        <ul className="flex flex-col gap-2">
-          {openPayables.map((payable) => {
-            const remaining = Math.max(
-              0,
-              Number(payable.total_amount) - Number(payable.amount_paid)
-            );
-            return (
-              <li key={payable.id}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPayPickerOpen(false);
-                    setPaymentError(null);
-                    setPaymentPayable(payable);
-                  }}
-                  className="flex w-full items-center justify-between rounded-control border border-slate-200 px-3 py-2 text-left hover:bg-accent-50"
-                >
-                  <div>
-                    <p className="text-sm font-medium text-slate-800">
-                      {payable.reason}
-                    </p>
-                    <p className="text-xs text-slate-400">
-                      {formatDate(payable.payable_date)}
-                    </p>
-                  </div>
-                  <span className="text-sm font-semibold text-danger-600">
-                    {formatMoney(remaining)}
-                  </span>
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      </Dialog>
+      <SupplierBulkPaymentDialog
+        open={bulkPaymentOpen}
+        supplier={supplier}
+        balance={balance?.balance ?? "0"}
+        onOpenChange={(open) => {
+          setBulkPaymentOpen(open);
+          if (!open) setBulkPaymentError(null);
+        }}
+        onSubmit={(values) => bulkPaymentMutation.mutate(values)}
+        isSubmitting={bulkPaymentMutation.isPending}
+        formError={bulkPaymentError}
+      />
 
       <PayablePaymentDialog
         open={!!paymentPayable}

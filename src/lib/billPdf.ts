@@ -39,6 +39,11 @@ export interface BillPdfOptions {
    * payment terms) — caller resolves the business's custom text or
    * the app's own default before calling. */
   billNote: string;
+  /** How many item rows the item table shows (Settings → Bill Item
+   * Rows, clamped 8-15 server-side). Row height is derived from this
+   * so the table's total body height stays fixed at TABLE_BODY_H_MM
+   * regardless of the count — see ROW_H below. */
+  billItemRowCount: number;
 }
 
 const TELUGU_FONT_FAMILY = "NotoSansTelugu";
@@ -57,12 +62,12 @@ const MARGIN_T = 5;
 const GAP = 20;
 const COPY_W = (PAGE_W - MARGIN_L * 2 - GAP) / 2; // 85mm
 const MAX_H = PAGE_H * 0.6; // 178.2mm ceiling — a safety cap for long item lists, not a floor
-const MIN_TABLE_ROWS = 12; // item table always reserves at least this many ruled rows, so a
-// 1-2 item bill doesn't look like a tiny scrap next to a 9-item one — bills with more items
-// than this still grow to fit every line, this only stops the table shrinking below it
-// (was 13 rows at ROW_H=4mm; the reserved table body height stays fixed at 52mm:
-// 12 * 4.33mm ≈ 13 * 4mm ≈ 52mm)
-const ROW_H = 52 / 12; // mm per item row ≈ 4.33 (was 4mm at 13 rows)
+const DEFAULT_ROW_COUNT = 12;
+// The item table's total body height stays fixed at this budget no
+// matter how many rows the business configures (Settings → Bill Item
+// Rows, 8-15) — more rows just means each one is shorter, and vice
+// versa. 52mm matches the original 13-row design (13 * 4mm).
+const TABLE_BODY_H_MM = 52;
 const FOOTER_ZONE = 16; // signature line + label, banner included below
 const PAD = 4;
 const GREEN: [number, number, number] = [21, 128, 61];
@@ -443,6 +448,8 @@ function getNoteLines(doc: jsPDF, noteText: string): string[] {
  */
 function measureContentEnd(doc: jsPDF, bill: Bill, opts: BillPdfOptions): number {
   const isCustomerBill = bill.bill_type === "CUSTOMER";
+  const rowCount = opts.billItemRowCount || DEFAULT_ROW_COUNT;
+  const rowH = TABLE_BODY_H_MM / rowCount;
   let cy = 7;
   cy += 3.6; // address line (reserved even if absent — keeps both copies identical)
   if (opts.proprietorName) cy += 4; // proprietor name, its own line
@@ -458,7 +465,7 @@ function measureContentEnd(doc: jsPDF, bill: Bill, opts: BillPdfOptions): number
   }
   cy += 1.5; // gap before table
   cy += 5; // table header row
-  cy += Math.max(bill.bill_items.length, MIN_TABLE_ROWS) * ROW_H; // one gridded row per item, minimum MIN_TABLE_ROWS
+  cy += Math.max(bill.bill_items.length, rowCount) * rowH; // one gridded row per item, minimum rowCount
   cy += 3; // gap before totals (table's own bottom border closes it)
   if (Number(bill.discount) > 0) cy += 3.6;
   cy += 3.6; // grand total
@@ -622,8 +629,9 @@ function drawCopy(
   // x-positions) so real row/column separator lines can be drawn,
   // not just a top/bottom rule.
   const headerH = 5;
-  const rowH = ROW_H;
-  const rowCount = Math.max(bill.bill_items.length, MIN_TABLE_ROWS);
+  const configuredRowCount = opts.billItemRowCount || DEFAULT_ROW_COUNT;
+  const rowH = TABLE_BODY_H_MM / configuredRowCount;
+  const rowCount = Math.max(bill.bill_items.length, configuredRowCount);
   const tableTop = cy;
   const tableBottom = tableTop + headerH + rowCount * rowH;
   const b0 = x + PAD;
@@ -661,11 +669,13 @@ function drawCopy(
   doc.setFontSize(7);
   const itemColWidth = b2 - b1 - 2;
   // Item name/quantity/rate/amount are bold and a point larger than
-  // before (was 7pt normal) for readability in the now-taller rows;
-  // S.No is left as-is, unchanged.
-  const ITEM_ROW_FONT_SIZE = 8;
+  // the original design (was 7pt normal) for readability — capped at
+  // 8pt, and shrunk only if a tall row count (13-15) makes rows too
+  // short to fit an 8pt line comfortably. S.No is left as-is, unchanged.
+  const ITEM_ROW_FONT_SIZE = Math.max(6, Math.min(8, rowH * 1.89));
   for (const [index, line] of bill.bill_items.entries()) {
-    const rowTextY = tableTop + headerH + index * rowH + 3;
+    const rowTextY =
+      tableTop + headerH + index * rowH + rowH / 2 + ITEM_ROW_FONT_SIZE * 0.1235;
     doc.setFont("helvetica", "normal");
     doc.setFontSize(7);
     doc.text(String(index + 1), b0 + 1, rowTextY);

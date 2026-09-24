@@ -1,5 +1,5 @@
 import { api } from "@/api/client";
-import type { RangeParams } from "@/api/endpoints/reports";
+import type { RangeParams, ReportRange } from "@/api/endpoints/reports";
 import type {
   ApiEnvelope,
   Payable,
@@ -29,6 +29,11 @@ export interface ListPayablesParams {
   status?: PayableStatus;
   search?: string;
   supplier_id?: string;
+  /** Omit (or "all") for no date filter — every payable ever recorded,
+   * the page's default. */
+  range?: ReportRange;
+  start_date?: string;
+  end_date?: string;
 }
 
 export async function listPayables(

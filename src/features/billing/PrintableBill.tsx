@@ -28,10 +28,19 @@ function splitDateTime(value: string): { date: string; time: string } {
   };
 }
 
-function ItemRow({ line, index }: { line: BillItem; index: number }) {
+function ItemRow({
+  line,
+  index,
+  rowStyle,
+}: {
+  line: BillItem;
+  index: number;
+  rowStyle: CSSProperties;
+}) {
   const itemName = usePrintName(line.item_name_snapshot, line.items?.telugu_name);
+  const contentCell: CSSProperties = { ...cell, fontSize: "10px", fontWeight: 700 };
   return (
-    <tr style={rowHeight}>
+    <tr style={rowStyle}>
       <td style={cell}>{index + 1}</td>
       <td style={contentCell}>{itemName}</td>
       <td style={{ ...contentCell, textAlign: "right" }}>
@@ -43,13 +52,14 @@ function ItemRow({ line, index }: { line: BillItem; index: number }) {
   );
 }
 
-/** Empty ruled row — pads the item table up to MIN_TABLE_ROWS so a
- * 1-2 item bill doesn't look like a tiny scrap next to a full one, the
- * same fixed-row-count treatment as the downloaded PDF. `&nbsp;` (not
- * an empty string) keeps the row's height identical to a real one. */
-function BlankItemRow() {
+/** Empty ruled row — pads the item table up to the business's
+ * configured row count so a 1-2 item bill doesn't look like a tiny
+ * scrap next to a full one, the same fixed-row-count treatment as the
+ * downloaded PDF. `&nbsp;` (not an empty string) keeps the row's
+ * height identical to a real one. */
+function BlankItemRow({ rowStyle }: { rowStyle: CSSProperties }) {
   return (
-    <tr style={rowHeight}>
+    <tr style={rowStyle}>
       <td style={cell}>&nbsp;</td>
       <td style={cell}>&nbsp;</td>
       <td style={cell}>&nbsp;</td>
@@ -67,17 +77,12 @@ const cell: CSSProperties = {
 
 // Item name / quantity / rate / amount get a bit more size and weight
 // for readability (S.No stays as-is — not part of the requested change).
-const contentCell: CSSProperties = {
-  ...cell,
-  fontSize: "10px",
-  fontWeight: 700,
-};
 
-// Row height is set explicitly (rather than left to padding+line-height)
-// so the table body's total height stays fixed at the same ~182px
-// budget regardless of row count: 13 rows at the old ~14px implicit
-// row height ≈ 182px; 12 rows at 15.17px ≈ the same 182px.
-const rowHeight: CSSProperties = { height: "15.17px" };
+// The item table's total body height stays fixed at this budget no
+// matter how many rows the business configures (Settings → Bill Item
+// Rows, 8-15) — more rows just means each one is shorter, and vice
+// versa. 182px matches the original 13-row design (13 * ~14px).
+const TABLE_BODY_HEIGHT_PX = 182;
 
 // A4 portrait: 210mm x 297mm. Layout measurements per requirement:
 // 10mm left/right margin, 5mm top margin, 20mm gap between the two
@@ -85,13 +90,11 @@ const rowHeight: CSSProperties = { height: "15.17px" };
 // otherwise content-driven — it hugs short bills instead of leaving a
 // blank gap below the totals — with a ceiling only, as a safety cap
 // for bills with many items. The one fixed part is the item table
-// itself (see MIN_TABLE_ROWS), so a 1-2 item bill doesn't look like a
-// tiny scrap next to a full one.
+// itself (see TABLE_BODY_HEIGHT_PX), so a 1-2 item bill doesn't look
+// like a tiny scrap next to a full one.
 const COPY_WIDTH_MM = 85; // (210 - 10*2 - 20) / 2
 const MAX_HEIGHT_MM = 178.2; // 60% of 297mm
-const MIN_TABLE_ROWS = 12; // item table always shows at least this many ruled rows
-// (was 13; rows are now taller — see rowHeight below — so the table's
-// total height stays fixed, just a slightly different row count/height)
+const DEFAULT_ROW_COUNT = 12;
 
 /** One physical copy of the bill — rendered twice (customer/original
  * and office copies) with identical transaction data, per the
@@ -109,6 +112,7 @@ function BillCopy({
   signatureLabel,
   borderWidth,
   billNote,
+  rowCount,
 }: {
   bill: Bill;
   businessName: string;
@@ -121,10 +125,15 @@ function BillCopy({
   signatureLabel: string;
   borderWidth: string;
   billNote: string;
+  rowCount: number;
 }) {
   const { t } = useLanguage();
   const isCustomerBill = bill.bill_type === "CUSTOMER";
   const { date, time } = splitDateTime(bill.transaction_at);
+  const effectiveRowCount = Math.max(bill.bill_items.length, rowCount);
+  const rowStyle: CSSProperties = {
+    height: `${TABLE_BODY_HEIGHT_PX / rowCount}px`,
+  };
 
   return (
     <div
@@ -230,12 +239,12 @@ function BillCopy({
         </thead>
         <tbody>
           {bill.bill_items.map((line, index) => (
-            <ItemRow key={line.id} line={line} index={index} />
+            <ItemRow key={line.id} line={line} index={index} rowStyle={rowStyle} />
           ))}
           {Array.from({
-            length: Math.max(0, MIN_TABLE_ROWS - bill.bill_items.length),
+            length: Math.max(0, effectiveRowCount - bill.bill_items.length),
           }).map((_, index) => (
-            <BlankItemRow key={`blank-${index}`} />
+            <BlankItemRow key={`blank-${index}`} rowStyle={rowStyle} />
           ))}
         </tbody>
       </table>
@@ -358,6 +367,7 @@ export function PrintableBill({ bill }: { bill: Bill }) {
   const businessAddress = business?.address ?? null;
   const proprietorName = business?.proprietor_name ?? null;
   const billNote = business?.bill_note?.trim() || t("billing.paymentTermsNote");
+  const rowCount = business?.bill_item_row_count ?? DEFAULT_ROW_COUNT;
 
   return (
     // display intentionally NOT set here — the .print-only class
@@ -386,6 +396,7 @@ export function PrintableBill({ bill }: { bill: Bill }) {
         signatureLabel={t("billing.receiversSignature")}
         borderWidth="1.5px"
         billNote={billNote}
+        rowCount={rowCount}
       />
       {/* Dotted cut line centered in the 20mm gap. */}
       <div
@@ -408,6 +419,7 @@ export function PrintableBill({ bill }: { bill: Bill }) {
         signatureLabel={t("billing.signatureSpace")}
         borderWidth="3px"
         billNote={billNote}
+        rowCount={rowCount}
       />
     </div>
   );

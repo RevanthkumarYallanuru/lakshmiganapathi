@@ -10,6 +10,7 @@ export interface BusinessSettings {
   bill_note: string | null;
   phone: string | null;
   alternate_phone: string | null;
+  bill_item_row_count: number;
 }
 
 export interface UpdateBusinessSettingsInput {
@@ -19,6 +20,7 @@ export interface UpdateBusinessSettingsInput {
   bill_note?: string;
   phone?: string;
   alternate_phone?: string;
+  bill_item_row_count?: number;
 }
 
 export async function getBusinessSettings(): Promise<BusinessSettings> {

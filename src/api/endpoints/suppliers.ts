@@ -1,5 +1,10 @@
 import { api } from "@/api/client";
-import type { ApiEnvelope, Supplier, SupplierBalance } from "@/types";
+import type {
+  ApiEnvelope,
+  Supplier,
+  SupplierBalance,
+  SupplierPayment,
+} from "@/types";
 
 export interface SupplierInput {
   name: string;
@@ -77,6 +82,31 @@ export async function setSupplierActive(
 ): Promise<Supplier> {
   const { data } = await api.patch<ApiEnvelope<Supplier>>(
     `/suppliers/${id}/${active ? "activate" : "deactivate"}`
+  );
+  return data.data;
+}
+
+export interface SupplierBulkPaymentInput {
+  amount: number;
+  payment_date?: string;
+}
+
+export async function listSupplierPayments(
+  id: string
+): Promise<ApiEnvelope<SupplierPayment[]>> {
+  const { data } = await api.get<ApiEnvelope<SupplierPayment[]>>(
+    `/suppliers/${id}/payments`
+  );
+  return data;
+}
+
+export async function createSupplierBulkPayment(
+  id: string,
+  input: SupplierBulkPaymentInput
+): Promise<SupplierPayment> {
+  const { data } = await api.post<ApiEnvelope<SupplierPayment>>(
+    `/suppliers/${id}/payments`,
+    input
   );
   return data.data;
 }

@@ -19,6 +19,7 @@ export function SettingsPage() {
     setProprietorName,
     setBillNote,
     setContactNumbers,
+    setBillItemRowCount,
   } = useAuth();
   const { t } = useLanguage();
   const { toast } = useToast();
@@ -34,6 +35,10 @@ export function SettingsPage() {
     business?.alternate_phone ?? ""
   );
   const [savingContactNumbers, setSavingContactNumbers] = useState(false);
+  const [rowCountInput, setRowCountInput] = useState(
+    String(business?.bill_item_row_count ?? 12)
+  );
+  const [savingRowCount, setSavingRowCount] = useState(false);
 
   useEffect(() => {
     setProprietorInput(business?.proprietor_name ?? "");
@@ -50,6 +55,10 @@ export function SettingsPage() {
   useEffect(() => {
     setAlternatePhoneInput(business?.alternate_phone ?? "");
   }, [business?.alternate_phone]);
+
+  useEffect(() => {
+    setRowCountInput(String(business?.bill_item_row_count ?? 12));
+  }, [business?.bill_item_row_count]);
 
   function handleLogout() {
     logout();
@@ -128,6 +137,22 @@ export function SettingsPage() {
       toast({ variant: "error", title: t("common.errorGeneric") });
     } finally {
       setSavingBillNote(false);
+    }
+  }
+
+  async function handleSaveRowCount() {
+    const count = Math.min(15, Math.max(8, Number(rowCountInput) || 12));
+    setSavingRowCount(true);
+    try {
+      await setBillItemRowCount(count);
+      toast({
+        variant: "success",
+        title: t("settings.billRowCountUpdateSuccess"),
+      });
+    } catch {
+      toast({ variant: "error", title: t("common.errorGeneric") });
+    } finally {
+      setSavingRowCount(false);
     }
   }
 
@@ -292,6 +317,40 @@ export function SettingsPage() {
         ) : (
           <p className="text-sm text-slate-400">
             {business?.bill_note || t("settings.nameDisplayModeAdminOnly")}
+          </p>
+        )}
+      </Card>
+
+      <Card>
+        <CardHeader title={t("settings.billRowCount")} />
+        <p className="mb-3 text-sm text-slate-500">
+          {t("settings.billRowCountHint")}
+        </p>
+        {hasRole("ADMIN") ? (
+          <div className="flex items-end gap-2">
+            <div className="w-28">
+              <Input
+                type="number"
+                min={8}
+                max={15}
+                value={rowCountInput}
+                onChange={(event) => setRowCountInput(event.target.value)}
+              />
+            </div>
+            <Button
+              size="md"
+              onClick={handleSaveRowCount}
+              loading={savingRowCount}
+              disabled={
+                Number(rowCountInput) === (business?.bill_item_row_count ?? 12)
+              }
+            >
+              {t("common.save")}
+            </Button>
+          </div>
+        ) : (
+          <p className="text-sm text-slate-400">
+            {business?.bill_item_row_count ?? 12}
           </p>
         )}
       </Card>
