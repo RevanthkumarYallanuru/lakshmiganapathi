@@ -85,4 +85,9 @@ export const queryKeys = {
     list: (params: unknown) => ["imports", "list", params] as const,
     detail: (id: string) => ["imports", "detail", id] as const,
   },
+
+  inventory: {
+    tally: () => ["inventory", "tally"] as const,
+    movements: (itemId: string) => ["inventory", "movements", itemId] as const,
+  },
 };

@@ -112,6 +112,39 @@ export function ImportsPage() {
         );
       },
     },
+    {
+      key: "status",
+      header: t("imports.paymentStatus"),
+      render: (importRecord) => {
+        // The import's own paid_amount is a fixed snapshot from
+        // creation time — the linked payable (already included in the
+        // response) is the live source of truth once a supplier
+        // payment is made through My Pays. Mirrors
+        // SupplierImportsPanel.tsx's identical logic.
+        if (!importRecord.payables) {
+          return <Badge tone="success">{t("payables.statusPaid")}</Badge>;
+        }
+        return (
+          <Badge
+            tone={
+              importRecord.payables.status === "PAID"
+                ? "success"
+                : importRecord.payables.status === "PARTIALLY_PAID"
+                  ? "warning"
+                  : "neutral"
+            }
+          >
+            {t(
+              importRecord.payables.status === "PAID"
+                ? "payables.statusPaid"
+                : importRecord.payables.status === "PARTIALLY_PAID"
+                  ? "payables.statusPartiallyPaid"
+                  : "payables.statusPending"
+            )}
+          </Badge>
+        );
+      },
+    },
   ];
 
   return (

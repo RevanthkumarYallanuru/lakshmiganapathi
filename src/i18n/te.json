@@ -13,6 +13,7 @@
   "nav.payables": "నా చెల్లింపులు",
   "nav.suppliers": "సరఫరాదారులు",
   "nav.imports": "దిగుమతులు",
+  "nav.inventory": "నిల్వ",
   "nav.settings": "సెట్టింగ్‌లు",
 
   "common.save": "సేవ్ చేయి",
@@ -476,5 +477,24 @@
   "imports.settled": "పరిష్కరించబడింది",
   "imports.date": "తేదీ",
   "imports.noImports": "ఇంకా దిగుమతులు నమోదు కాలేదు.",
-  "imports.createSuccess": "దిగుమతి విజయవంతంగా నమోదు చేయబడింది."
+  "imports.createSuccess": "దిగుమతి విజయవంతంగా నమోదు చేయబడింది.",
+  "imports.paymentStatus": "చెల్లింపు స్థితి",
+
+  "inventory.title": "నిల్వ",
+  "inventory.item": "వస్తువు",
+  "inventory.lastImportDate": "చివరి దిగుమతి తేదీ",
+  "inventory.lastImportQty": "చివరి దిగుమతి పరిమాణం",
+  "inventory.totalImported": "మొత్తం దిగుమతి",
+  "inventory.totalSold": "మొత్తం అమ్మకం",
+  "inventory.remainingStock": "మిగిలిన నిల్వ",
+  "inventory.noItems": "ఇంకా నిల్వ కదలికలు లేవు.",
+  "inventory.movementHistory": "నిల్వ కదలికల చరిత్ర",
+  "inventory.movementType": "రకం",
+  "inventory.reference": "సూచన",
+  "inventory.quantity": "పరిమాణం",
+  "inventory.balance": "నిల్వ",
+  "inventory.noMovements": "ఇంకా నిల్వ కదలికలు నమోదు కాలేదు.",
+  "inventory.movementImport": "దిగుమతి",
+  "inventory.movementSale": "అమ్మకం",
+  "inventory.movementAdjustment": "సర్దుబాటు"
 }

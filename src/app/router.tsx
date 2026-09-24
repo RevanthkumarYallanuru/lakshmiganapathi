@@ -98,6 +98,11 @@ const ImportsPage = lazy(() =>
     default: m.ImportsPage,
   }))
 );
+const InventoryPage = lazy(() =>
+  import("@/features/inventory/InventoryPage").then((m) => ({
+    default: m.InventoryPage,
+  }))
+);
 
 function PageFallback() {
   return <LoadingState label="Loading..." />;
@@ -140,6 +145,7 @@ export function AppRouter() {
           <Route path="/suppliers" element={<SuppliersPage />} />
           <Route path="/suppliers/:id" element={<SupplierProfilePage />} />
           <Route path="/imports" element={<ImportsPage />} />
+          <Route path="/inventory" element={<InventoryPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Route>
       </Route>

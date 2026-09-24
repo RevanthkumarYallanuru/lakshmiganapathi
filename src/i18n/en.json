@@ -13,6 +13,7 @@
   "nav.payables": "My Pays",
   "nav.suppliers": "Suppliers",
   "nav.imports": "Imports",
+  "nav.inventory": "Inventory",
   "nav.settings": "Settings",
 
   "common.save": "Save",
@@ -476,5 +477,24 @@
   "imports.settled": "Settled",
   "imports.date": "Date",
   "imports.noImports": "No imports recorded yet.",
-  "imports.createSuccess": "Import recorded successfully."
+  "imports.createSuccess": "Import recorded successfully.",
+  "imports.paymentStatus": "Payment Status",
+
+  "inventory.title": "Inventory",
+  "inventory.item": "Item",
+  "inventory.lastImportDate": "Last Import Date",
+  "inventory.lastImportQty": "Last Import Qty",
+  "inventory.totalImported": "Total Imported",
+  "inventory.totalSold": "Total Sold",
+  "inventory.remainingStock": "Remaining Stock",
+  "inventory.noItems": "No items with stock activity yet.",
+  "inventory.movementHistory": "Stock Movement History",
+  "inventory.movementType": "Type",
+  "inventory.reference": "Reference",
+  "inventory.quantity": "Quantity",
+  "inventory.balance": "Balance",
+  "inventory.noMovements": "No stock movements recorded yet.",
+  "inventory.movementImport": "Import",
+  "inventory.movementSale": "Sale",
+  "inventory.movementAdjustment": "Adjustment"
 }

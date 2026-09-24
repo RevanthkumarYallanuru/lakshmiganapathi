@@ -253,6 +253,36 @@ export interface Import {
   updated_at: string;
 }
 
+export type StockMovementType = "IMPORT" | "SALE" | "ADJUSTMENT";
+
+export interface StockMovement {
+  id: string;
+  business_id: string;
+  item_id: string;
+  movement_type: StockMovementType;
+  bill_id: string | null;
+  import_id: string | null;
+  transaction_at: string;
+  quantity_in: string;
+  quantity_out: string;
+  balance_after: string;
+  description: string | null;
+  created_by: string;
+  created_at: string;
+  bills?: { bill_number: string } | null;
+}
+
+export interface StockTallyRow {
+  item_id: string;
+  english_name: string;
+  telugu_name: string | null;
+  last_import_date: string | null;
+  last_import_qty: string | null;
+  total_imported: string;
+  total_sold: string;
+  remaining_stock: string;
+}
+
 export interface PayablesInsights {
   range: { start: string; end: string };
   count: number;

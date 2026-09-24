@@ -12,6 +12,7 @@ import {
   Truck,
   Users,
   Wallet,
+  Warehouse,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -36,5 +37,6 @@ export const navItems: NavItem[] = [
   { to: "/payables", labelKey: "nav.payables", icon: HandCoins },
   { to: "/suppliers", labelKey: "nav.suppliers", icon: Store },
   { to: "/imports", labelKey: "nav.imports", icon: PackagePlus },
+  { to: "/inventory", labelKey: "nav.inventory", icon: Warehouse },
   { to: "/settings", labelKey: "nav.settings", icon: Settings },
 ];
