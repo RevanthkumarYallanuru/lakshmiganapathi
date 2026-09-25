@@ -57,9 +57,17 @@ export function BillDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.bills.detail(id) });
       queryClient.invalidateQueries({ queryKey: queryKeys.bills.all() });
+      queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["reports"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.payments.all() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.deliveries.all() });
       if (bill?.customer_id) {
         queryClient.invalidateQueries({
           queryKey: queryKeys.ledger.balance(bill.customer_id),
+        });
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.ledger.allEntries(bill.customer_id),
         });
       }
       toast({ variant: "success", title: t("billing.cancelSuccess") });

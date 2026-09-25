@@ -147,9 +147,17 @@ export function BillNewPage() {
       }),
     onSuccess: (bill) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.bills.all() });
+      // A bill moves stock, dashboard/report totals and (walk-ins) payment figures.
+      queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["reports"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.payments.all() });
       if (billType === "CUSTOMER" && customer) {
         queryClient.invalidateQueries({
           queryKey: queryKeys.ledger.balance(customer.id),
+        });
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.ledger.allEntries(customer.id),
         });
       }
       // A delivery record (agent optional, defaults to "Not Assigned")

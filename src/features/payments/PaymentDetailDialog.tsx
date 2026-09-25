@@ -77,9 +77,15 @@ export function PaymentDetailDialog({
       queryClient.invalidateQueries({
         queryKey: queryKeys.payments.detail(paymentId ?? ""),
       });
+      queryClient.invalidateQueries({ queryKey: queryKeys.bills.all() });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["reports"] });
       if (payment?.customer_id) {
         queryClient.invalidateQueries({
           queryKey: queryKeys.ledger.balance(payment.customer_id),
+        });
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.ledger.allEntries(payment.customer_id),
         });
       }
       toast({ variant: "success", title: t("payments.cancelSuccess") });

@@ -11,7 +11,6 @@ import {
   recordPayablePayment,
   type ListPayablesParams,
 } from "@/api/endpoints/payables";
-import type { ReportRange } from "@/api/endpoints/reports";
 import { queryKeys } from "@/api/queryKeys";
 import {
   Badge,
@@ -52,15 +51,6 @@ const STATUS_LABEL_KEY: Record<PayableStatus, TranslationKey> = {
   PARTIALLY_PAID: "payables.statusPartiallyPaid",
   PAID: "payables.statusPaid",
 };
-
-const INSIGHTS_RANGE_OPTIONS: { value: ReportRange; labelKey: TranslationKey }[] = [
-  { value: "today", labelKey: "common.today" },
-  { value: "week", labelKey: "common.thisWeek" },
-  { value: "month", labelKey: "common.thisMonth" },
-  { value: "year", labelKey: "common.thisYear" },
-  { value: "all", labelKey: "common.allTime" },
-  { value: "custom", labelKey: "common.customRange" },
-];
 
 const INSIGHTS_TONE_CLASSES = {
   accent: "bg-accent-50 text-accent-600",
@@ -107,23 +97,21 @@ export function PayablesPage() {
   const [status, setStatus] = useState<PayableStatus | "">("");
   const dateFilter = useDateRangeFilter("all");
 
-  const [insightsRange, setInsightsRange] = useState<ReportRange>("today");
-  const [insightsStartDate, setInsightsStartDate] = useState("");
-  const [insightsEndDate, setInsightsEndDate] = useState("");
-
-  const insightsParams =
-    insightsRange === "custom"
-      ? {
-          range: insightsRange,
-          start_date: insightsStartDate || undefined,
-          end_date: insightsEndDate || undefined,
-        }
-      : { range: insightsRange };
+  // Cards default to All time, same as the list, so a fresh page never
+  // shows zeros while the table below is full of payables.
+  const insightsFilter = useDateRangeFilter("all");
+  const insightsParams = {
+    range: insightsFilter.range,
+    ...(insightsFilter.range === "custom" && {
+      start_date: insightsFilter.startDate,
+      end_date: insightsFilter.endDate,
+    }),
+  };
 
   const { data: insights } = useQuery({
     queryKey: queryKeys.payables.insights(insightsParams),
     queryFn: () => getPayablesInsights(insightsParams),
-    enabled: insightsRange !== "custom" || (!!insightsStartDate && !!insightsEndDate),
+    enabled: insightsFilter.ready,
     placeholderData: keepPreviousData,
   });
 
@@ -313,32 +301,7 @@ export function PayablesPage() {
           <h2 className="text-sm font-semibold text-slate-700">
             {t("payables.insights")}
           </h2>
-          <div className="flex flex-wrap items-center gap-2">
-            <Select
-              value={insightsRange}
-              onValueChange={(value) => setInsightsRange(value as ReportRange)}
-              options={INSIGHTS_RANGE_OPTIONS.map((option) => ({
-                value: option.value,
-                label: t(option.labelKey),
-              }))}
-            />
-            {insightsRange === "custom" && (
-              <>
-                <input
-                  type="date"
-                  value={insightsStartDate}
-                  onChange={(event) => setInsightsStartDate(event.target.value)}
-                  className="h-10 rounded-control border border-slate-300 bg-white px-2 text-sm"
-                />
-                <input
-                  type="date"
-                  value={insightsEndDate}
-                  onChange={(event) => setInsightsEndDate(event.target.value)}
-                  className="h-10 rounded-control border border-slate-300 bg-white px-2 text-sm"
-                />
-              </>
-            )}
-          </div>
+          <DateRangeFilter filter={insightsFilter} />
         </div>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">

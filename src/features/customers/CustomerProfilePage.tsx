@@ -75,8 +75,11 @@ export function CustomerProfilePage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.payments.all() });
       queryClient.invalidateQueries({ queryKey: queryKeys.ledger.balance(id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.ledger.allEntries(id) });
       queryClient.invalidateQueries({ queryKey: queryKeys.bills.all() });
       queryClient.invalidateQueries({ queryKey: queryKeys.customers.all() });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["reports"] });
       toast({ variant: "success", title: t("payments.createSuccess") });
       setPaymentOpen(false);
       setPaymentError(null);

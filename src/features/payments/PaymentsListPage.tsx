@@ -81,7 +81,12 @@ export function PaymentsListPage() {
       queryClient.invalidateQueries({
         queryKey: queryKeys.ledger.balance(payment.customer_id),
       });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.ledger.allEntries(payment.customer_id),
+      });
       queryClient.invalidateQueries({ queryKey: queryKeys.bills.all() });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["reports"] });
       toast({ variant: "success", title: t("payments.createSuccess") });
       setFormOpen(false);
       setFormError(null);

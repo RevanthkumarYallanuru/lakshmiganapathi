@@ -63,6 +63,8 @@ export function ImportsPage() {
       queryClient.invalidateQueries({ queryKey: queryKeys.imports.all() });
       queryClient.invalidateQueries({ queryKey: queryKeys.payables.all() });
       queryClient.invalidateQueries({ queryKey: queryKeys.suppliers.balances() });
+      queryClient.invalidateQueries({ queryKey: ["suppliers"] });
+      queryClient.invalidateQueries({ queryKey: ["inventory"] });
       toast({ variant: "success", title: t("imports.createSuccess") });
       setCreateOpen(false);
       setCreateError(null);
