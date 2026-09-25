@@ -116,8 +116,11 @@ export function BillNewPage() {
   // paying there still can't exceed the bill total (matches the
   // backend, which rejects overpayment for non-customer bills).
   const rawPaid = Number(amountPaid) || 0;
-  const paid =
-    billType === "CUSTOMER" ? Math.max(0, rawPaid) : Math.min(rawPaid, grandTotal);
+  // A walk-in bill is a complete sale paid in full at the counter — the
+  // paid amount is always the total (the backend enforces the same).
+  const paid = billType === "CUSTOMER" ? Math.max(0, rawPaid) : grandTotal;
+  const effectiveMethod: PaymentMethod | "" =
+    billType === "WALK_IN" ? paymentMethod || "CASH" : paymentMethod;
   const currentBillBalance = Math.max(0, grandTotal - paid);
   const excessPaid = Math.max(0, paid - grandTotal);
   const overallBalance = previousBalance + grandTotal - paid;
@@ -129,7 +132,7 @@ export function BillNewPage() {
         customer_id: billType === "CUSTOMER" ? customer!.id : undefined,
         discount,
         amount_paid: paid,
-        payment_method: paid > 0 ? (paymentMethod as PaymentMethod) : undefined,
+        payment_method: paid > 0 ? (effectiveMethod as PaymentMethod) : undefined,
         notes: notes.trim() || undefined,
         items: lines.map((line) => ({
           item_id: line.item.id,
@@ -243,7 +246,7 @@ export function BillNewPage() {
       setFormError(t("billing.weightsIncomplete"));
       return;
     }
-    if (paid > 0 && !paymentMethod) {
+    if (paid > 0 && !effectiveMethod) {
       setFormError(t("billing.paymentMethod"));
       return;
     }
@@ -363,6 +366,21 @@ export function BillNewPage() {
             />
           </div>
 
+          {billType === "WALK_IN" ? (
+            <div className="flex flex-col gap-1.5">
+              <span className="text-sm font-medium text-slate-700">
+                {t("billing.paidNow")}
+              </span>
+              <div className="flex h-10 items-center justify-between rounded-control border border-slate-200 bg-slate-50 px-3 text-sm">
+                <span className="font-medium text-slate-800">
+                  {formatMoney(grandTotal)}
+                </span>
+                <span className="text-xs text-slate-500">
+                  {t("billing.walkInPaidInFull")}
+                </span>
+              </div>
+            </div>
+          ) : (
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center justify-between">
               <label className="text-sm font-medium text-slate-700">
@@ -385,11 +403,12 @@ export function BillNewPage() {
               className="h-10 rounded-control border border-slate-300 bg-white px-3 text-sm"
             />
           </div>
+          )}
 
           {paid > 0 && (
             <Select
               label={t("billing.paymentMethod")}
-              value={paymentMethod}
+              value={effectiveMethod}
               onValueChange={(value) =>
                 setPaymentMethod(value as PaymentMethod)
               }

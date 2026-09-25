@@ -59,7 +59,11 @@ const STATUS_LABEL_KEY: Record<DeliveryStatus, TranslationKey> = {
 
 const NEXT_STATUSES: Record<DeliveryStatus, { status: Exclude<DeliveryStatus, "GENERATED">; labelKey: TranslationKey }[]> = {
   GENERATED: [{ status: "SENT", labelKey: "delivery.markSent" }],
-  SENT: [{ status: "REACHED", labelKey: "delivery.markReached" }],
+  SENT: [
+    { status: "REACHED", labelKey: "delivery.markReached" },
+    { status: "BALANCE", labelKey: "delivery.markBalance" },
+    { status: "CLEARED", labelKey: "delivery.markCleared" },
+  ],
   REACHED: [
     { status: "BALANCE", labelKey: "delivery.markBalance" },
     { status: "CLEARED", labelKey: "delivery.markCleared" },

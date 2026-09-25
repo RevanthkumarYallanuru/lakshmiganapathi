@@ -260,6 +260,7 @@
   "billing.currentBill": "ప్రస్తుత బిల్లు",
   "billing.paidNow": "ఇప్పుడు చెల్లించింది",
   "billing.payInFull": "పూర్తిగా చెల్లించు",
+  "billing.walkInPaidInFull": "కొనుగోలు సమయంలోనే పూర్తిగా చెల్లించారు",
   "billing.paymentMethod": "చెల్లింపు విధానం",
   "billing.currentBillBalance": "ప్రస్తుత బిల్లు బాకీ",
   "billing.overallBalance": "మొత్తం బాకీ",

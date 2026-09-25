@@ -260,6 +260,7 @@
   "billing.currentBill": "Current Bill",
   "billing.paidNow": "Paid Now",
   "billing.payInFull": "Pay in full",
+  "billing.walkInPaidInFull": "Paid in full at purchase",
   "billing.paymentMethod": "Payment Method",
   "billing.currentBillBalance": "Current Bill Balance",
   "billing.overallBalance": "Overall Balance",
