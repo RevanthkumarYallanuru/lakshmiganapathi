@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePrintName } from "@/hooks/useLocalizedName";
 import { formatMoney } from "@/lib/money";
+import { amountInWords } from "@/lib/numberToWords";
 import type { Bill, BillItem } from "@/types";
 
 /**
@@ -38,7 +39,7 @@ function ItemRow({
   rowStyle: CSSProperties;
 }) {
   const itemName = usePrintName(line.item_name_snapshot, line.items?.telugu_name);
-  const contentCell: CSSProperties = { ...cell, fontSize: "10px", fontWeight: 700 };
+  const contentCell: CSSProperties = { ...cell, fontSize: "10.5px", fontWeight: 700 };
   return (
     <tr style={rowStyle}>
       <td style={cell}>{index + 1}</td>
@@ -70,10 +71,23 @@ function BlankItemRow({ rowStyle }: { rowStyle: CSSProperties }) {
 }
 
 const cell: CSSProperties = {
-  padding: "1px 3px",
+  padding: "1.5px 4px",
   verticalAlign: "middle",
   border: "1px solid #9ca3af",
 };
+
+// Comfortable, readable column proportions for the item table — Item
+// gets the most room since it's the field most likely to get cramped;
+// S.No stays tight since it only ever needs 1-2 digits. Percentages of
+// the table's own (unchanged) total width, so this is spacing only —
+// no change to the item table's or the copy's overall footprint.
+const ITEM_COL_WIDTHS = {
+  slNo: "7%",
+  item: "38%",
+  quantity: "19%",
+  rate: "17%",
+  amount: "19%",
+} as const;
 
 // Item name / quantity / rate / amount get a bit more size and weight
 // for readability (S.No stays as-is — not part of the requested change).
@@ -113,6 +127,7 @@ function BillCopy({
   borderWidth,
   billNote,
   rowCount,
+  includePreviousBalance,
 }: {
   bill: Bill;
   businessName: string;
@@ -126,6 +141,10 @@ function BillCopy({
   borderWidth: string;
   billNote: string;
   rowCount: number;
+  /** Presentation-only: whether this print shows the previous/total
+   * balance rows. Never written back anywhere — see PrintableBill's
+   * own doc comment. */
+  includePreviousBalance: boolean;
 }) {
   const { t } = useLanguage();
   const isCustomerBill = bill.bill_type === "CUSTOMER";
@@ -224,17 +243,35 @@ function BillCopy({
         style={{
           width: "100%",
           borderCollapse: "collapse",
+          tableLayout: "fixed",
           fontSize: "8.5px",
           border: "1px solid #9ca3af",
         }}
       >
+        <colgroup>
+          <col style={{ width: ITEM_COL_WIDTHS.slNo }} />
+          <col style={{ width: ITEM_COL_WIDTHS.item }} />
+          <col style={{ width: ITEM_COL_WIDTHS.quantity }} />
+          <col style={{ width: ITEM_COL_WIDTHS.rate }} />
+          <col style={{ width: ITEM_COL_WIDTHS.amount }} />
+        </colgroup>
         <thead>
           <tr style={{ background: "#e8f5ec" }}>
-            <th style={{ ...cell, textAlign: "left" }}>S.No</th>
-            <th style={{ ...cell, textAlign: "left" }}>Item</th>
-            <th style={{ ...cell, textAlign: "right" }}>Quantity</th>
-            <th style={{ ...cell, textAlign: "right" }}>Rate</th>
-            <th style={{ ...cell, textAlign: "right" }}>Amount</th>
+            <th style={{ ...cell, textAlign: "left", fontSize: "8.5px", fontWeight: 800 }}>
+              S.No
+            </th>
+            <th style={{ ...cell, textAlign: "left", fontSize: "8.5px", fontWeight: 800 }}>
+              Item
+            </th>
+            <th style={{ ...cell, textAlign: "right", fontSize: "8.5px", fontWeight: 800 }}>
+              Quantity
+            </th>
+            <th style={{ ...cell, textAlign: "right", fontSize: "8.5px", fontWeight: 800 }}>
+              Rate
+            </th>
+            <th style={{ ...cell, textAlign: "right", fontSize: "8.5px", fontWeight: 800 }}>
+              Amount
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -265,7 +302,7 @@ function BillCopy({
           </tr>
           {isCustomerBill && (
             <>
-              {Number(bill.previous_balance) > 0 && (
+              {includePreviousBalance && Number(bill.previous_balance) > 0 && (
                 <tr>
                   <td>{t("billing.previousBalance")}</td>
                   <td style={{ textAlign: "right" }}>
@@ -286,15 +323,28 @@ function BillCopy({
                 </tr>
               )}
               <tr style={{ fontWeight: 700 }}>
-                <td>{t("customers.outstanding")}</td>
+                <td>
+                  {includePreviousBalance
+                    ? t("customers.outstanding")
+                    : t("billing.currentBillBalance")}
+                </td>
                 <td style={{ textAlign: "right" }}>
-                  {formatMoney(bill.overall_balance)}
+                  {formatMoney(
+                    includePreviousBalance
+                      ? bill.overall_balance
+                      : bill.current_bill_balance
+                  )}
                 </td>
               </tr>
             </>
           )}
         </tbody>
       </table>
+
+      <div style={{ marginTop: "2px", fontSize: "7.5px" }}>
+        <span style={{ color: "#444" }}>{t("billing.amountInWords")}: </span>
+        <span style={{ fontWeight: 700 }}>{amountInWords(bill.grand_total)}</span>
+      </div>
 
       <div
         style={{
@@ -352,7 +402,16 @@ function BillCopy({
  * mode, but a printed name is always a single language — never the
  * combined "English — Telugu" the on-screen BOTH mode shows.
  */
-export function PrintableBill({ bill }: { bill: Bill }) {
+export function PrintableBill({
+  bill,
+  includePreviousBalance = true,
+}: {
+  bill: Bill;
+  /** Presentation-only choice from BillPrintOptionsDialog for this one
+   * print — never persisted, never affects any stored/dashboard figure.
+   * Defaults to the existing full-detail behavior when not specified. */
+  includePreviousBalance?: boolean;
+}) {
   const { business } = useAuth();
   const { t } = useLanguage();
 
@@ -397,6 +456,7 @@ export function PrintableBill({ bill }: { bill: Bill }) {
         borderWidth="1.5px"
         billNote={billNote}
         rowCount={rowCount}
+        includePreviousBalance={includePreviousBalance}
       />
       {/* Dotted cut line centered in the 20mm gap. */}
       <div
@@ -420,6 +480,7 @@ export function PrintableBill({ bill }: { bill: Bill }) {
         borderWidth="3px"
         billNote={billNote}
         rowCount={rowCount}
+        includePreviousBalance={includePreviousBalance}
       />
     </div>
   );

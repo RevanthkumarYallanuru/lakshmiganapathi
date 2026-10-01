@@ -1,5 +1,6 @@
 import { jsPDF } from "jspdf";
 
+import { amountInWords } from "@/lib/numberToWords";
 import type { Bill, PrintLanguage } from "@/types";
 
 /**
@@ -44,6 +45,11 @@ export interface BillPdfOptions {
    * so the table's total body height stays fixed at TABLE_BODY_H_MM
    * regardless of the count — see ROW_H below. */
   billItemRowCount: number;
+  /** Presentation-only, from BillPrintOptionsDialog — whether this one
+   * PDF shows the previous/total balance rows. Never persisted, never
+   * affects any stored figure; defaults to the existing full-detail
+   * behavior when omitted. */
+  includePreviousBalance?: boolean;
 }
 
 const TELUGU_FONT_FAMILY = "NotoSansTelugu";
@@ -440,6 +446,19 @@ function getNoteLines(doc: jsPDF, noteText: string): string[] {
   return doc.splitTextToSize(noteText, COPY_W - PAD * 2) as string[];
 }
 
+const WORDS_FONT_SIZE = 6.5;
+const WORDS_LINE_HEIGHT = 3;
+
+/** Same wrap-to-content-width approach as `getNoteLines`, for the
+ * "Amount Chargeable (in words)" line — a large total can run past one
+ * line, so its real wrapped line count drives both the pre-measured
+ * box height and the actual draw, same as the note. */
+function getWordsLines(doc: jsPDF, words: string): string[] {
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(WORDS_FONT_SIZE);
+  return doc.splitTextToSize(words, COPY_W - PAD * 2) as string[];
+}
+
 /**
  * How far (from the box top) the totals section ends — computed
  * arithmetically with the exact same increments `drawCopy` uses, so
@@ -469,12 +488,16 @@ function measureContentEnd(doc: jsPDF, bill: Bill, opts: BillPdfOptions): number
   cy += 3; // gap before totals (table's own bottom border closes it)
   if (Number(bill.discount) > 0) cy += 3.6;
   cy += 3.6; // grand total
+  const includePreviousBalance = opts.includePreviousBalance ?? true;
   if (isCustomerBill) {
-    if (Number(bill.previous_balance) > 0) cy += 3.6;
+    if (includePreviousBalance && Number(bill.previous_balance) > 0) cy += 3.6;
     cy += 3.6; // paid now
     if (Number(bill.amount_paid) > Number(bill.grand_total)) cy += 3.6; // partial balance paid
-    cy += 3.6; // balance row
+    cy += 3.6; // balance row (Total Balance or Current Balance, depending on the toggle)
   }
+  cy += 2; // gap before amount-in-words
+  const wordsLines = getWordsLines(doc, amountInWords(bill.grand_total));
+  cy += (1 + wordsLines.length) * WORDS_LINE_HEIGHT; // label line + wrapped value line(s)
   // cy now sits at the note's own draw position; footerY (in drawCopy)
   // adds a small gap after however many lines the note wraps to.
   const noteLines = getNoteLines(doc, opts.billNote);
@@ -634,12 +657,16 @@ function drawCopy(
   const rowCount = Math.max(bill.bill_items.length, configuredRowCount);
   const tableTop = cy;
   const tableBottom = tableTop + headerH + rowCount * rowH;
+  // Item gets noticeably more room than the original design (22 -> 26mm)
+  // for readability, taking 1mm each from the other, tighter columns —
+  // safe since quantity/rate/amount all auto-shrink their font via
+  // fitMoneyFontSize if a value is ever wide enough to need it.
   const b0 = x + PAD;
-  const b1 = b0 + 8; // S.No | Item
-  const b2 = b1 + 22; // Item | Quantity
-  const b3 = b2 + 14; // Quantity | Rate
-  const b4 = b3 + 15; // Rate | Amount — wide enough for 3-digit rates without crowding Amount
-  const b5 = contentRight; // = b4 + 18, right edge — wide enough for 4-digit line totals
+  const b1 = b0 + 7; // S.No | Item
+  const b2 = b1 + 26; // Item | Quantity
+  const b3 = b2 + 13; // Quantity | Rate
+  const b4 = b3 + 14; // Rate | Amount
+  const b5 = contentRight; // = b4 + 17, right edge
 
   doc.setDrawColor(...GREEN);
   doc.setLineWidth(0.25);
@@ -656,7 +683,7 @@ function drawCopy(
   }
 
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(6.5);
+  doc.setFontSize(7);
   doc.setTextColor(0, 0, 0);
   const headerTextY = tableTop + 3.5;
   doc.text("S.No", b0 + 1, headerTextY);
@@ -726,8 +753,9 @@ function drawCopy(
   doc.text(money(bill.grand_total), contentRight, cy, { align: "right" });
   cy += 3.6;
 
+  const includePreviousBalance = opts.includePreviousBalance ?? true;
   if (isCustomerBill) {
-    if (Number(bill.previous_balance) > 0) {
+    if (includePreviousBalance && Number(bill.previous_balance) > 0) {
       doc.setFont("helvetica", "normal");
       doc.text("Previous Balance", x + PAD, cy);
       doc.text(money(bill.previous_balance), contentRight, cy, { align: "right" });
@@ -747,10 +775,29 @@ function drawCopy(
       cy += 3.6;
     }
     doc.setFont("helvetica", "bold");
-    doc.text("Balance", x + PAD, cy);
-    doc.text(money(bill.overall_balance), contentRight, cy, { align: "right" });
+    doc.text(includePreviousBalance ? "Balance" : "Current Balance", x + PAD, cy);
+    doc.text(
+      money(includePreviousBalance ? bill.overall_balance : bill.current_bill_balance),
+      contentRight,
+      cy,
+      { align: "right" }
+    );
     cy += 3.6;
   }
+
+  cy += 2;
+  doc.setFontSize(WORDS_FONT_SIZE);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(...GRAY);
+  doc.text("Amount Chargeable (in words)", x + PAD, cy);
+  doc.setTextColor(0, 0, 0);
+  cy += WORDS_LINE_HEIGHT;
+  const wordsLines = getWordsLines(doc, amountInWords(bill.grand_total));
+  doc.setFont("helvetica", "bold");
+  for (const [lineIndex, line] of wordsLines.entries()) {
+    doc.text(line, x + PAD, cy + lineIndex * WORDS_LINE_HEIGHT);
+  }
+  cy += wordsLines.length * WORDS_LINE_HEIGHT;
 
   const noteLines = getNoteLines(doc, opts.billNote);
   doc.setTextColor(...GRAY);

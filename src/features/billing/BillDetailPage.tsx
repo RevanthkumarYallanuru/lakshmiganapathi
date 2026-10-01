@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Download, Printer, XCircle } from "lucide-react";
@@ -17,6 +17,7 @@ import {
   useToast,
 } from "@/components/ui";
 import { BillDeliveryPanel } from "@/features/billing/BillDeliveryPanel";
+import { BillPrintOptionsDialog } from "@/features/billing/BillPrintOptionsDialog";
 import { PrintableBill } from "@/features/billing/PrintableBill";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -40,6 +41,30 @@ export function BillDetailPage() {
   const [cancelOpen, setCancelOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [downloadingPdf, setDownloadingPdf] = useState(false);
+
+  // Print-options flow (see BillPrintOptionsDialog): Print and Download
+  // PDF both open the same "Include Previous Balance?" dialog first;
+  // `pendingPrintAction` remembers which one asked so the dialog's
+  // choice knows whether to trigger window.print() or generate a PDF.
+  // This is a presentation choice for this one print only — it is
+  // never saved, and `includePreviousBalance` never touches any
+  // stored/dashboard figure, only what PrintableBill renders.
+  const [printOptionsOpen, setPrintOptionsOpen] = useState(false);
+  const [pendingPrintAction, setPendingPrintAction] = useState<
+    "print" | "download" | null
+  >(null);
+  const [includePreviousBalance, setIncludePreviousBalance] = useState(true);
+  const [printTrigger, setPrintTrigger] = useState(0);
+
+  // Fires after `includePreviousBalance` has committed to the DOM (the
+  // PrintableBill re-render from the same state update batch that set
+  // printTrigger), so window.print() always captures the chosen layout.
+  useEffect(() => {
+    if (printTrigger > 0) {
+      window.print();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [printTrigger]);
 
   const {
     data: bill,
@@ -92,7 +117,7 @@ export function BillDetailPage() {
 
   const isCustomerBill = bill.bill_type === "CUSTOMER";
 
-  async function handleDownloadPdf() {
+  async function handleDownloadPdf(includeBalanceForThisDownload: boolean) {
     setDownloadingPdf(true);
     try {
       // jsPDF + html2canvas are ~600KB combined — the largest
@@ -110,12 +135,23 @@ export function BillDetailPage() {
         printLanguage: business?.print_language ?? "ENGLISH",
         billNote: business?.bill_note?.trim() || t("billing.paymentTermsNote"),
         billItemRowCount: business?.bill_item_row_count ?? 12,
+        includePreviousBalance: includeBalanceForThisDownload,
       });
     } catch {
       toast({ variant: "error", title: t("common.errorGeneric") });
     } finally {
       setDownloadingPdf(false);
     }
+  }
+
+  function handlePrintOptionSelected(includeBalance: boolean) {
+    setIncludePreviousBalance(includeBalance);
+    if (pendingPrintAction === "download") {
+      void handleDownloadPdf(includeBalance);
+    } else {
+      setPrintTrigger((n) => n + 1);
+    }
+    setPendingPrintAction(null);
   }
 
   return (
@@ -130,14 +166,24 @@ export function BillDetailPage() {
           {t("billing.back")}
         </button>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => window.print()}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setPendingPrintAction("print");
+              setPrintOptionsOpen(true);
+            }}
+          >
             <Printer className="h-3.5 w-3.5" aria-hidden />
             {t("common.print")}
           </Button>
           <Button
             variant="outline"
             size="sm"
-            onClick={handleDownloadPdf}
+            onClick={() => {
+              setPendingPrintAction("download");
+              setPrintOptionsOpen(true);
+            }}
             loading={downloadingPdf}
           >
             <Download className="h-3.5 w-3.5" aria-hidden />
@@ -157,7 +203,7 @@ export function BillDetailPage() {
         </div>
       </div>
 
-      <PrintableBill bill={bill} />
+      <PrintableBill bill={bill} includePreviousBalance={includePreviousBalance} />
 
       {isCustomerBill && <BillDeliveryPanel billId={bill.id} />}
 
@@ -307,6 +353,15 @@ export function BillDetailPage() {
           onChange={(event) => setReason(event.target.value)}
         />
       </ConfirmDialog>
+
+      <BillPrintOptionsDialog
+        open={printOptionsOpen}
+        onOpenChange={(open) => {
+          setPrintOptionsOpen(open);
+          if (!open) setPendingPrintAction(null);
+        }}
+        onSelect={handlePrintOptionSelected}
+      />
     </div>
   );
 }
