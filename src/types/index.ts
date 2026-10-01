@@ -281,7 +281,7 @@ export interface Import {
   updated_at: string;
 }
 
-export type StockMovementType = "IMPORT" | "SALE" | "ADJUSTMENT";
+export type StockMovementType = "IMPORT" | "SALE" | "ADJUSTMENT" | "CORRECTION";
 
 export interface StockMovement {
   id: string;

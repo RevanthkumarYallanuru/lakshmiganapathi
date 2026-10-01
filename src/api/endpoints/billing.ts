@@ -34,6 +34,10 @@ export interface ListBillsParams {
   bill_status?: BillStatus;
   bill_type?: BillType;
   search?: string;
+  /** Opt-in: includes each bill's line items (just the item name), for
+   * the customer profile's Bills panel — see billing.service.ts's
+   * getBills for why this isn't the default. */
+  include_items?: boolean;
 }
 
 export async function listBills(

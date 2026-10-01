@@ -1,10 +1,20 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { PenLine } from "lucide-react";
 
-import { exportStockTally, getStockTally } from "@/api/endpoints/inventory";
+import { ApiError } from "@/api/client";
+import {
+  exportStockTally,
+  getStockTally,
+  setItemStock,
+} from "@/api/endpoints/inventory";
 import { queryKeys } from "@/api/queryKeys";
-import { ExportButton, Table } from "@/components/ui";
+import { Button, ExportButton, Table, useToast } from "@/components/ui";
 import type { TableColumn } from "@/components/ui";
+import {
+  AdjustStockDialog,
+  type AdjustStockSubmitValues,
+} from "@/features/inventory/AdjustStockDialog";
 import { StockMovementHistoryDialog } from "@/features/inventory/StockMovementHistoryDialog";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useLocalizedName } from "@/hooks/useLocalizedName";
@@ -17,12 +27,17 @@ function ItemNameCell({ row }: { row: StockTallyRow }) {
 }
 
 /** Stock Tally — the reliable current-stock view, computed from every
- * IMPORT/SALE/ADJUSTMENT movement, not just the last import. Imports
- * itself stays purely a purchase-history page; this is where "how much
- * do we actually have" lives. */
+ * IMPORT/SALE/ADJUSTMENT/CORRECTION movement, not just the last
+ * import. Imports itself stays purely a purchase-history page; this is
+ * where "how much do we actually have" lives, and the per-row "Adjust
+ * Stock" button is the one place to correct it by hand. */
 export function InventoryPage() {
   const { t } = useLanguage();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [historyItem, setHistoryItem] = useState<StockTallyRow | null>(null);
+  const [adjustItem, setAdjustItem] = useState<StockTallyRow | null>(null);
+  const [adjustError, setAdjustError] = useState<string | null>(null);
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: queryKeys.inventory.tally(),
@@ -30,6 +45,22 @@ export function InventoryPage() {
   });
 
   const rows = data?.data ?? [];
+
+  const adjustMutation = useMutation({
+    mutationFn: (values: AdjustStockSubmitValues) =>
+      setItemStock(adjustItem!.item_id, values),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      toast({ variant: "success", title: t("inventory.adjustSuccess") });
+      setAdjustItem(null);
+      setAdjustError(null);
+    },
+    onError: (error) => {
+      setAdjustError(
+        error instanceof ApiError ? error.message : t("common.errorGeneric")
+      );
+    },
+  });
 
   const columns: TableColumn<StockTallyRow>[] = [
     {
@@ -61,16 +92,35 @@ export function InventoryPage() {
     {
       key: "remaining",
       header: t("inventory.remainingStock"),
+      // Never shown negative — see inventory.service.ts's getStockTally
+      // doc comment: a handful of items have more historical sales
+      // than recorded imports, which the backend floors at 0 here
+      // rather than surfacing as a negative count.
       render: (row) => (
-        <span
-          className={
-            Number(row.remaining_stock) < 0
-              ? "font-semibold text-danger-600"
-              : "font-semibold text-slate-800"
-          }
-        >
+        <span className="font-semibold text-slate-800">
           {row.remaining_stock}
         </span>
+      ),
+    },
+    {
+      key: "actions",
+      header: "",
+      render: (row) => (
+        <div className="flex justify-end">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(event) => {
+              event.stopPropagation();
+              setAdjustError(null);
+              setAdjustItem(row);
+            }}
+            aria-label={t("inventory.adjustStock")}
+            title={t("inventory.adjustStock")}
+          >
+            <PenLine className="h-4 w-4" aria-hidden />
+          </Button>
+        </div>
       ),
     },
   ];
@@ -105,6 +155,20 @@ export function InventoryPage() {
         }}
         itemId={historyItem?.item_id ?? null}
         itemName={historyItem?.english_name ?? ""}
+      />
+
+      <AdjustStockDialog
+        open={!!adjustItem}
+        item={adjustItem}
+        onOpenChange={(open) => {
+          if (!open) {
+            setAdjustItem(null);
+            setAdjustError(null);
+          }
+        }}
+        onSubmit={(values) => adjustMutation.mutate(values)}
+        isSubmitting={adjustMutation.isPending}
+        formError={adjustError}
       />
     </div>
   );

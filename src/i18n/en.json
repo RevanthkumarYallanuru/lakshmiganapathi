@@ -514,5 +514,13 @@
   "inventory.noMovements": "No stock movements recorded yet.",
   "inventory.movementImport": "Import",
   "inventory.movementSale": "Sale",
-  "inventory.movementAdjustment": "Adjustment"
+  "inventory.movementAdjustment": "Adjustment",
+  "inventory.movementCorrection": "Correction",
+  "inventory.adjustStock": "Adjust Stock",
+  "inventory.currentStock": "Current stock",
+  "inventory.newStockQuantity": "New stock quantity",
+  "inventory.adjustNotesOptional": "Notes (optional)",
+  "inventory.adjustNotesPlaceholder": "e.g. Stock received from another supplier",
+  "inventory.saveStock": "Save",
+  "inventory.adjustSuccess": "Stock updated"
 }

@@ -18,8 +18,13 @@ import { formatDate, formatMoney } from "@/lib/money";
 import type { Bill } from "@/types";
 
 function itemsSummary(bill: Bill): string {
-  if (bill.bill_items.length === 0) return "—";
-  const names = bill.bill_items.map((line) => line.item_name_snapshot);
+  // Defensive: bill_items is only ever present when this panel's own
+  // `include_items: true` request succeeds — never let a missing or
+  // malformed field crash the whole page (one row's description just
+  // reads "—" instead).
+  const items = bill.bill_items;
+  if (!Array.isArray(items) || items.length === 0) return "—";
+  const names = items.map((line) => line.item_name_snapshot);
   if (names.length <= 2) return names.join(", ");
   return `${names.slice(0, 2).join(", ")} +${names.length - 2}`;
 }
@@ -35,7 +40,15 @@ export function CustomerBillsPanel({ customerId }: { customerId: string }) {
   const navigate = useNavigate();
 
   const dateFilter = useDateRangeFilter("all");
-  const params = { customer_id: customerId, ...dateFilter.params };
+  // include_items: this panel's Description column summarizes each
+  // bill's line items (see itemsSummary below) — the plain Billing
+  // list page doesn't need them, so the backend only sends them when
+  // asked.
+  const params = {
+    customer_id: customerId,
+    include_items: true,
+    ...dateFilter.params,
+  };
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: queryKeys.bills.list(params),

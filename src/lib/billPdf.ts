@@ -446,14 +446,31 @@ function getNoteLines(doc: jsPDF, noteText: string): string[] {
   return doc.splitTextToSize(noteText, COPY_W - PAD * 2) as string[];
 }
 
-// The totals section's labels stay at the normal 7.5pt body size; its
-// digit values are drawn at ~1.6x that (12pt) so the actual amounts
-// read clearly at a glance — TOTALS_ROW_H (replacing the 3.6mm other
-// single-line rows use) gives the taller glyphs room without crowding
-// the row below.
+// The totals section's labels stay at the normal 7.5pt body size. Most
+// digit values (Discount/Partial Balance Paid/Balance) are drawn at
+// ~1.6x that (12pt) so they read clearly at a glance — TOTALS_ROW_H
+// (replacing the 3.6mm other single-line rows use) gives the taller
+// glyphs room without crowding the row below. Grand Total, Previous
+// Balance and Paid Now step down from that full size to a normal,
+// readable size instead, graded among themselves so Grand Total (what
+// matters most for THIS bill) still reads a touch larger than Paid Now
+// (already settled) or Previous Balance (carried over from before);
+// TOTALS_ROW_H stays the same for every row since it's already sized
+// for the tallest (12pt) text, so these smaller rows just leave a
+// little extra breathing room rather than needing less of it.
 const TOTALS_LABEL_FONT_SIZE = 7.5;
 const TOTALS_VALUE_FONT_SIZE = 12;
+const TOTALS_VALUE_FONT_SIZE_GRAND_TOTAL = TOTALS_LABEL_FONT_SIZE * 1.2;
+const TOTALS_VALUE_FONT_SIZE_PAID_NOW = TOTALS_LABEL_FONT_SIZE * 1.1;
+const TOTALS_VALUE_FONT_SIZE_PREVIOUS_BALANCE = TOTALS_LABEL_FONT_SIZE; // 1x
 const TOTALS_ROW_H = 4.6;
+
+// The customer name is drawn at ~1.7x the old size (8.5 -> ~14.5pt) for
+// visibility; CUSTOMER_NAME_ROW_H (replacing the 3.6mm the old, smaller
+// size used) gives it room so the Phone/Place lines below it don't
+// crowd its descenders.
+const CUSTOMER_NAME_FONT_SIZE = 14.5;
+const CUSTOMER_NAME_ROW_H = 6.2;
 
 // "Amount Chargeable (in words)" — the label stays small/gray like any
 // other field label; the actual words are drawn noticeably larger and
@@ -492,7 +509,7 @@ function measureContentEnd(doc: jsPDF, bill: Bill, opts: BillPdfOptions): number
   if (hasPhoneLine) cy += 3.4; // phone number(s) line
   cy += 3 + 4 + 2 + 4; // dashed divider + bill number/date block
   if (isCustomerBill) {
-    cy += 3.6; // name (bold, slightly bigger than the other rows)
+    cy += CUSTOMER_NAME_ROW_H; // name (bold, drawn noticeably bigger than the other rows)
     if (bill.customer_phone_snapshot) cy += 3.4;
     if (bill.place_snapshot) cy += 3.4;
   } else {
@@ -636,13 +653,13 @@ function drawCopy(
       x + PAD + 16,
       cy,
       "bold",
-      8.5,
+      CUSTOMER_NAME_FONT_SIZE,
       nameMaxWidth,
       teluguCanvasReady
     );
     doc.setFont("helvetica", "normal");
     doc.setFontSize(7);
-    cy += 3.6;
+    cy += CUSTOMER_NAME_ROW_H;
     if (bill.customer_phone_snapshot) {
       doc.setTextColor(...GRAY);
       doc.text("Phone", x + PAD, cy);
@@ -784,14 +801,14 @@ function drawCopy(
       doc.setFont("helvetica", "normal");
       doc.setFontSize(TOTALS_LABEL_FONT_SIZE);
       doc.text("Previous Balance", x + PAD, cy);
-      doc.setFontSize(TOTALS_VALUE_FONT_SIZE);
+      doc.setFontSize(TOTALS_VALUE_FONT_SIZE_PREVIOUS_BALANCE);
       doc.text(money(bill.previous_balance), contentRight, cy, { align: "right" });
       cy += TOTALS_ROW_H;
     }
     doc.setFont("helvetica", "normal");
     doc.setFontSize(TOTALS_LABEL_FONT_SIZE);
     doc.text("Paid Now", x + PAD, cy);
-    doc.setFontSize(TOTALS_VALUE_FONT_SIZE);
+    doc.setFontSize(TOTALS_VALUE_FONT_SIZE_PAID_NOW);
     doc.text(money(bill.amount_paid), contentRight, cy, { align: "right" });
     cy += TOTALS_ROW_H;
     const excessPaid = Number(bill.amount_paid) - Number(bill.grand_total);
@@ -808,7 +825,7 @@ function drawCopy(
     doc.setFont("helvetica", "bold");
     doc.setFontSize(TOTALS_LABEL_FONT_SIZE);
     doc.text(includePreviousBalance ? "Balance" : "Current Balance", x + PAD, cy);
-    doc.setFontSize(TOTALS_VALUE_FONT_SIZE);
+    doc.setFontSize(TOTALS_VALUE_FONT_SIZE_GRAND_TOTAL);
     doc.text(
       money(includePreviousBalance ? bill.overall_balance : bill.current_bill_balance),
       contentRight,

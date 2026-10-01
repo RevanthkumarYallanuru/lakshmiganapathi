@@ -9,16 +9,18 @@ import type { TranslationKey } from "@/i18n";
 import { formatDate } from "@/lib/money";
 import type { StockMovement, StockMovementType } from "@/types";
 
-const TYPE_TONE: Record<StockMovementType, "success" | "danger" | "neutral"> = {
+const TYPE_TONE: Record<StockMovementType, "success" | "danger" | "neutral" | "accent"> = {
   IMPORT: "success",
   SALE: "danger",
   ADJUSTMENT: "neutral",
+  CORRECTION: "accent",
 };
 
 const TYPE_LABEL_KEY: Record<StockMovementType, TranslationKey> = {
   IMPORT: "inventory.movementImport",
   SALE: "inventory.movementSale",
   ADJUSTMENT: "inventory.movementAdjustment",
+  CORRECTION: "inventory.movementCorrection",
 };
 
 export function StockMovementHistoryDialog({

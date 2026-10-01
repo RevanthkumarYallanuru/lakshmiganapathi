@@ -89,11 +89,16 @@ const ITEM_COL_WIDTHS = {
   amount: "19%",
 } as const;
 
-// The totals table's base font is 8.5px; the digit values in it are
-// drawn at ~1.6x that (13.5px) so the actual amounts stand out clearly
-// from their labels — labels (the <td> to their left) stay at the
-// table's own base size.
+// The totals table's base font is 8.5px. Grand Total (the figure that
+// matters most for THIS bill) is the most prominent at ~1.6x that
+// (13.5px) — Discount and Partial Balance Paid share the same size.
+// Balance (the running total, carried forward to the next bill) is
+// deliberately a step down from that, with Paid Now and Previous
+// Balance graded smaller again below it.
 const amountCell: CSSProperties = { textAlign: "right", fontSize: "13.5px" };
+const amountCellBalance: CSSProperties = { textAlign: "right", fontSize: "10.2px" }; // 1.2x
+const amountCellPaidNow: CSSProperties = { textAlign: "right", fontSize: "9.35px" }; // 1.1x
+const amountCellPreviousBalance: CSSProperties = { textAlign: "right", fontSize: "8.5px" }; // 1x, same as the table's own base size
 
 // Item name / quantity / rate / amount get a bit more size and weight
 // for readability (S.No stays as-is — not part of the requested change).
@@ -223,7 +228,10 @@ function BillCopy({
             <>
               <tr>
                 <td style={{ width: "24%", color: "#444" }}>{t("customers.englishName")}</td>
-                <td style={{ fontSize: "9.5px", fontWeight: 800 }}>: {customerName}</td>
+                {/* Same size as the item table's own text (contentCell
+                    below) — large enough to be clearly readable without
+                    dominating the rest of the copy. */}
+                <td style={{ fontSize: "10.5px", fontWeight: 800 }}>: {customerName}</td>
               </tr>
               {bill.customer_phone_snapshot && (
                 <tr>
@@ -312,14 +320,14 @@ function BillCopy({
               {includePreviousBalance && Number(bill.previous_balance) > 0 && (
                 <tr>
                   <td>{t("billing.previousBalance")}</td>
-                  <td style={amountCell}>
+                  <td style={amountCellPreviousBalance}>
                     {formatMoney(bill.previous_balance)}
                   </td>
                 </tr>
               )}
               <tr>
                 <td>{t("billing.paidNow")}</td>
-                <td style={amountCell}>{formatMoney(bill.amount_paid)}</td>
+                <td style={amountCellPaidNow}>{formatMoney(bill.amount_paid)}</td>
               </tr>
               {Number(bill.amount_paid) > Number(bill.grand_total) && (
                 <tr>
@@ -335,7 +343,7 @@ function BillCopy({
                     ? t("customers.outstanding")
                     : t("billing.currentBillBalance")}
                 </td>
-                <td style={amountCell}>
+                <td style={amountCellBalance}>
                   {formatMoney(
                     includePreviousBalance
                       ? bill.overall_balance

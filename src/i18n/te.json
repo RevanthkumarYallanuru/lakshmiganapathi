@@ -514,5 +514,13 @@
   "inventory.noMovements": "ఇంకా నిల్వ కదలికలు నమోదు కాలేదు.",
   "inventory.movementImport": "దిగుమతి",
   "inventory.movementSale": "అమ్మకం",
-  "inventory.movementAdjustment": "సర్దుబాటు"
+  "inventory.movementAdjustment": "సర్దుబాటు",
+  "inventory.movementCorrection": "దిద్దుబాటు",
+  "inventory.adjustStock": "నిల్వ సవరించు",
+  "inventory.currentStock": "ప్రస్తుత నిల్వ",
+  "inventory.newStockQuantity": "కొత్త నిల్వ పరిమాణం",
+  "inventory.adjustNotesOptional": "గమనికలు (ఐచ్ఛికం)",
+  "inventory.adjustNotesPlaceholder": "ఉదా. వేరే సరఫరాదారు నుండి వచ్చిన నిల్వ",
+  "inventory.saveStock": "సేవ్ చేయి",
+  "inventory.adjustSuccess": "నిల్వ నవీకరించబడింది"
 }
