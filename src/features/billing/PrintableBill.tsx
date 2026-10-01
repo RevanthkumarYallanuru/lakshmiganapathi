@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePrintName } from "@/hooks/useLocalizedName";
 import { formatMoney } from "@/lib/money";
-import { amountInWords } from "@/lib/numberToWords";
+import { amountWordsBody } from "@/lib/numberToWords";
 import type { Bill, BillItem } from "@/types";
 
 /**
@@ -89,6 +89,12 @@ const ITEM_COL_WIDTHS = {
   amount: "19%",
 } as const;
 
+// The totals table's base font is 8.5px; the digit values in it are
+// drawn at ~1.6x that (13.5px) so the actual amounts stand out clearly
+// from their labels — labels (the <td> to their left) stay at the
+// table's own base size.
+const amountCell: CSSProperties = { textAlign: "right", fontSize: "13.5px" };
+
 // Item name / quantity / rate / amount get a bit more size and weight
 // for readability (S.No stays as-is — not part of the requested change).
 
@@ -99,15 +105,16 @@ const ITEM_COL_WIDTHS = {
 const TABLE_BODY_HEIGHT_PX = 182;
 
 // A4 portrait: 210mm x 297mm. Layout measurements per requirement:
-// 10mm left/right margin, 5mm top margin, 20mm gap between the two
+// 2mm left/right page margin, 3mm top margin (see index.css's @page
+// rule, which must stay in sync with these), 20mm gap between the two
 // copies (with a dotted cut line centered in it). Box height is
 // otherwise content-driven — it hugs short bills instead of leaving a
-// blank gap below the totals — with a ceiling only, as a safety cap
-// for bills with many items. The one fixed part is the item table
-// itself (see TABLE_BODY_HEIGHT_PX), so a 1-2 item bill doesn't look
-// like a tiny scrap next to a full one.
-const COPY_WIDTH_MM = 85; // (210 - 10*2 - 20) / 2
-const MAX_HEIGHT_MM = 178.2; // 60% of 297mm
+// blank gap below the totals — with a ceiling of 50% of the page
+// height, as a safety cap for bills with many items. The one fixed
+// part is the item table itself (see TABLE_BODY_HEIGHT_PX), so a 1-2
+// item bill doesn't look like a tiny scrap next to a full one.
+const COPY_WIDTH_MM = 93; // (210 - 2*2 - 20) / 2
+const MAX_HEIGHT_MM = 148.5; // 50% of 297mm
 const DEFAULT_ROW_COUNT = 12;
 
 /** One physical copy of the bill — rendered twice (customer/original
@@ -293,31 +300,31 @@ function BillCopy({
           {Number(bill.discount) > 0 && (
             <tr>
               <td>{t("billing.billDiscount")}</td>
-              <td style={{ textAlign: "right" }}>{formatMoney(bill.discount)}</td>
+              <td style={amountCell}>{formatMoney(bill.discount)}</td>
             </tr>
           )}
           <tr style={{ fontWeight: 700 }}>
             <td>{t("billing.grandTotal")}</td>
-            <td style={{ textAlign: "right" }}>{formatMoney(bill.grand_total)}</td>
+            <td style={amountCell}>{formatMoney(bill.grand_total)}</td>
           </tr>
           {isCustomerBill && (
             <>
               {includePreviousBalance && Number(bill.previous_balance) > 0 && (
                 <tr>
                   <td>{t("billing.previousBalance")}</td>
-                  <td style={{ textAlign: "right" }}>
+                  <td style={amountCell}>
                     {formatMoney(bill.previous_balance)}
                   </td>
                 </tr>
               )}
               <tr>
                 <td>{t("billing.paidNow")}</td>
-                <td style={{ textAlign: "right" }}>{formatMoney(bill.amount_paid)}</td>
+                <td style={amountCell}>{formatMoney(bill.amount_paid)}</td>
               </tr>
               {Number(bill.amount_paid) > Number(bill.grand_total) && (
                 <tr>
                   <td>{t("billing.partialBalancePaid")}</td>
-                  <td style={{ textAlign: "right", color: "#15803d", fontWeight: 600 }}>
+                  <td style={{ ...amountCell, color: "#15803d", fontWeight: 600 }}>
                     {formatMoney(Number(bill.amount_paid) - Number(bill.grand_total))}
                   </td>
                 </tr>
@@ -328,7 +335,7 @@ function BillCopy({
                     ? t("customers.outstanding")
                     : t("billing.currentBillBalance")}
                 </td>
-                <td style={{ textAlign: "right" }}>
+                <td style={amountCell}>
                   {formatMoney(
                     includePreviousBalance
                       ? bill.overall_balance
@@ -341,9 +348,13 @@ function BillCopy({
         </tbody>
       </table>
 
-      <div style={{ marginTop: "2px", fontSize: "7.5px" }}>
-        <span style={{ color: "#444" }}>{t("billing.amountInWords")}: </span>
-        <span style={{ fontWeight: 700 }}>{amountInWords(bill.grand_total)}</span>
+      <div style={{ marginTop: "3px" }}>
+        <div style={{ fontSize: "8px", color: "#444" }}>
+          {t("billing.amountInWords")}: <span style={{ fontWeight: 400 }}>INR:</span>
+        </div>
+        <div style={{ fontWeight: 800, fontSize: "11px", color: "#111" }}>
+          {amountWordsBody(bill.grand_total)}
+        </div>
       </div>
 
       <div

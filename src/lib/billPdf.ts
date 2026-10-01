@@ -1,6 +1,6 @@
 import { jsPDF } from "jspdf";
 
-import { amountInWords } from "@/lib/numberToWords";
+import { amountWordsBody } from "@/lib/numberToWords";
 import type { Bill, PrintLanguage } from "@/types";
 
 /**
@@ -63,11 +63,11 @@ const MM_PER_PX = 25.4 / RASTER_DPI;
 
 const PAGE_W = 210;
 const PAGE_H = 297;
-const MARGIN_L = 10;
-const MARGIN_T = 5;
+const MARGIN_L = 2; // kept in sync with index.css's @page margin and PrintableBill.tsx
+const MARGIN_T = 3; // kept in sync with index.css's @page margin and PrintableBill.tsx
 const GAP = 20;
-const COPY_W = (PAGE_W - MARGIN_L * 2 - GAP) / 2; // 85mm
-const MAX_H = PAGE_H * 0.6; // 178.2mm ceiling — a safety cap for long item lists, not a floor
+const COPY_W = (PAGE_W - MARGIN_L * 2 - GAP) / 2; // 93mm
+const MAX_H = PAGE_H * 0.5; // 148.5mm ceiling — a safety cap for long item lists, not a floor
 const DEFAULT_ROW_COUNT = 12;
 // The item table's total body height stays fixed at this budget no
 // matter how many rows the business configures (Settings → Bill Item
@@ -446,13 +446,29 @@ function getNoteLines(doc: jsPDF, noteText: string): string[] {
   return doc.splitTextToSize(noteText, COPY_W - PAD * 2) as string[];
 }
 
-const WORDS_FONT_SIZE = 6.5;
-const WORDS_LINE_HEIGHT = 3;
+// The totals section's labels stay at the normal 7.5pt body size; its
+// digit values are drawn at ~1.6x that (12pt) so the actual amounts
+// read clearly at a glance — TOTALS_ROW_H (replacing the 3.6mm other
+// single-line rows use) gives the taller glyphs room without crowding
+// the row below.
+const TOTALS_LABEL_FONT_SIZE = 7.5;
+const TOTALS_VALUE_FONT_SIZE = 12;
+const TOTALS_ROW_H = 4.6;
+
+// "Amount Chargeable (in words)" — the label stays small/gray like any
+// other field label; the actual words are drawn noticeably larger and
+// bold so it reads as a real pull-quote rather than another footnote
+// line (the label's own line uses its own, smaller height).
+const WORDS_LABEL_FONT_SIZE = 7.5;
+const WORDS_LABEL_LINE_HEIGHT = 3.2;
+const WORDS_FONT_SIZE = 11;
+const WORDS_LINE_HEIGHT = 4.3;
 
 /** Same wrap-to-content-width approach as `getNoteLines`, for the
  * "Amount Chargeable (in words)" line — a large total can run past one
  * line, so its real wrapped line count drives both the pre-measured
- * box height and the actual draw, same as the note. */
+ * box height and the actual draw, same as the note. Measured at the
+ * bold WORDS_FONT_SIZE actually used to draw it. */
 function getWordsLines(doc: jsPDF, words: string): string[] {
   doc.setFont("helvetica", "bold");
   doc.setFontSize(WORDS_FONT_SIZE);
@@ -486,18 +502,21 @@ function measureContentEnd(doc: jsPDF, bill: Bill, opts: BillPdfOptions): number
   cy += 5; // table header row
   cy += Math.max(bill.bill_items.length, rowCount) * rowH; // one gridded row per item, minimum rowCount
   cy += 3; // gap before totals (table's own bottom border closes it)
-  if (Number(bill.discount) > 0) cy += 3.6;
-  cy += 3.6; // grand total
+  // Totals rows use TOTALS_ROW_H, not the 3.6mm other single-line rows
+  // use above — their digit values are drawn ~1.6x the normal size
+  // (see TOTALS_VALUE_FONT_SIZE in drawCopy), so they need more room.
+  if (Number(bill.discount) > 0) cy += TOTALS_ROW_H;
+  cy += TOTALS_ROW_H; // grand total
   const includePreviousBalance = opts.includePreviousBalance ?? true;
   if (isCustomerBill) {
-    if (includePreviousBalance && Number(bill.previous_balance) > 0) cy += 3.6;
-    cy += 3.6; // paid now
-    if (Number(bill.amount_paid) > Number(bill.grand_total)) cy += 3.6; // partial balance paid
-    cy += 3.6; // balance row (Total Balance or Current Balance, depending on the toggle)
+    if (includePreviousBalance && Number(bill.previous_balance) > 0) cy += TOTALS_ROW_H;
+    cy += TOTALS_ROW_H; // paid now
+    if (Number(bill.amount_paid) > Number(bill.grand_total)) cy += TOTALS_ROW_H; // partial balance paid
+    cy += TOTALS_ROW_H; // balance row (Total Balance or Current Balance, depending on the toggle)
   }
   cy += 2; // gap before amount-in-words
-  const wordsLines = getWordsLines(doc, amountInWords(bill.grand_total));
-  cy += (1 + wordsLines.length) * WORDS_LINE_HEIGHT; // label line + wrapped value line(s)
+  const wordsLines = getWordsLines(doc, amountWordsBody(bill.grand_total));
+  cy += WORDS_LABEL_LINE_HEIGHT + wordsLines.length * WORDS_LINE_HEIGHT; // "...INR:" label line + wrapped value line(s)
   // cy now sits at the note's own draw position; footerY (in drawCopy)
   // adds a small gap after however many lines the note wraps to.
   const noteLines = getNoteLines(doc, opts.billNote);
@@ -741,58 +760,72 @@ function drawCopy(
 
   cy = tableBottom + 3;
 
-  doc.setFontSize(7.5);
+  // Each row below draws its label at TOTALS_LABEL_FONT_SIZE and its
+  // money value at the larger TOTALS_VALUE_FONT_SIZE — doc.text calls
+  // don't share a size, so the font size is set again before each one.
   if (Number(bill.discount) > 0) {
     doc.setFont("helvetica", "normal");
+    doc.setFontSize(TOTALS_LABEL_FONT_SIZE);
     doc.text("Bill Discount", x + PAD, cy);
+    doc.setFontSize(TOTALS_VALUE_FONT_SIZE);
     doc.text(money(bill.discount), contentRight, cy, { align: "right" });
-    cy += 3.6;
+    cy += TOTALS_ROW_H;
   }
   doc.setFont("helvetica", "bold");
+  doc.setFontSize(TOTALS_LABEL_FONT_SIZE);
   doc.text("Grand Total", x + PAD, cy);
+  doc.setFontSize(TOTALS_VALUE_FONT_SIZE);
   doc.text(money(bill.grand_total), contentRight, cy, { align: "right" });
-  cy += 3.6;
+  cy += TOTALS_ROW_H;
 
   const includePreviousBalance = opts.includePreviousBalance ?? true;
   if (isCustomerBill) {
     if (includePreviousBalance && Number(bill.previous_balance) > 0) {
       doc.setFont("helvetica", "normal");
+      doc.setFontSize(TOTALS_LABEL_FONT_SIZE);
       doc.text("Previous Balance", x + PAD, cy);
+      doc.setFontSize(TOTALS_VALUE_FONT_SIZE);
       doc.text(money(bill.previous_balance), contentRight, cy, { align: "right" });
-      cy += 3.6;
+      cy += TOTALS_ROW_H;
     }
     doc.setFont("helvetica", "normal");
+    doc.setFontSize(TOTALS_LABEL_FONT_SIZE);
     doc.text("Paid Now", x + PAD, cy);
+    doc.setFontSize(TOTALS_VALUE_FONT_SIZE);
     doc.text(money(bill.amount_paid), contentRight, cy, { align: "right" });
-    cy += 3.6;
+    cy += TOTALS_ROW_H;
     const excessPaid = Number(bill.amount_paid) - Number(bill.grand_total);
     if (excessPaid > 0) {
       doc.setFont("helvetica", "normal");
       doc.setTextColor(...GREEN);
+      doc.setFontSize(TOTALS_LABEL_FONT_SIZE);
       doc.text("Partial Balance Paid", x + PAD, cy);
+      doc.setFontSize(TOTALS_VALUE_FONT_SIZE);
       doc.text(money(excessPaid), contentRight, cy, { align: "right" });
       doc.setTextColor(0, 0, 0);
-      cy += 3.6;
+      cy += TOTALS_ROW_H;
     }
     doc.setFont("helvetica", "bold");
+    doc.setFontSize(TOTALS_LABEL_FONT_SIZE);
     doc.text(includePreviousBalance ? "Balance" : "Current Balance", x + PAD, cy);
+    doc.setFontSize(TOTALS_VALUE_FONT_SIZE);
     doc.text(
       money(includePreviousBalance ? bill.overall_balance : bill.current_bill_balance),
       contentRight,
       cy,
       { align: "right" }
     );
-    cy += 3.6;
+    cy += TOTALS_ROW_H;
   }
 
   cy += 2;
-  doc.setFontSize(WORDS_FONT_SIZE);
+  doc.setFontSize(WORDS_LABEL_FONT_SIZE);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(...GRAY);
-  doc.text("Amount Chargeable (in words)", x + PAD, cy);
+  doc.text("Amount Chargeable (in words): INR:", x + PAD, cy);
   doc.setTextColor(0, 0, 0);
-  cy += WORDS_LINE_HEIGHT;
-  const wordsLines = getWordsLines(doc, amountInWords(bill.grand_total));
+  cy += WORDS_LABEL_LINE_HEIGHT;
+  const wordsLines = getWordsLines(doc, amountWordsBody(bill.grand_total));
   doc.setFont("helvetica", "bold");
   for (const [lineIndex, line] of wordsLines.entries()) {
     doc.text(line, x + PAD, cy + lineIndex * WORDS_LINE_HEIGHT);

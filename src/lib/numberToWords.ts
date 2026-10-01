@@ -57,15 +57,18 @@ function integerToWords(value: number): string {
 }
 
 /**
- * Formats a rupee amount as the "INR <words> Only" line printed below
- * the bill's totals. Accepts a Decimal-as-string (as money fields are
- * always serialized) or a number; never throws on bad input — falls
- * back to "INR Zero Only" rather than showing a broken string on a
- * printed bill.
+ * Formats a rupee amount as the "<words> Only" line printed below the
+ * bill's totals — deliberately without the "INR" currency prefix,
+ * which the caller draws separately (smaller, normal weight) ahead of
+ * this bold/larger words text; see `amountInWords` for the combined
+ * "INR <words> Only" form. Accepts a Decimal-as-string (as money
+ * fields are always serialized) or a number; never throws on bad
+ * input — falls back to "Zero Only" rather than showing a broken
+ * string on a printed bill.
  */
-export function amountInWords(value: string | number): string {
+export function amountWordsBody(value: string | number): string {
   const num = Number(value);
-  if (!Number.isFinite(num) || num < 0) return "INR Zero Only";
+  if (!Number.isFinite(num) || num < 0) return "Zero Only";
 
   // Round to the nearest paise first so float noise (e.g. 60.1 stored
   // as 60.099999…) never produces a spurious paise amount.
@@ -75,8 +78,15 @@ export function amountInWords(value: string | number): string {
 
   const rupeeWords = integerToWords(rupees);
   if (paise === 0) {
-    return `INR ${rupeeWords} Only`;
+    return `${rupeeWords} Only`;
   }
   const paiseWords = integerToWords(paise);
-  return `INR ${rupeeWords} Rupees and ${paiseWords} Paise Only`;
+  return `${rupeeWords} Rupees and ${paiseWords} Paise Only`;
+}
+
+/** The full "INR <words> Only" form — see `amountWordsBody` for just
+ * the words (no currency prefix), which is what the bill print/PDF
+ * actually renders (with "INR:" drawn separately, smaller). */
+export function amountInWords(value: string | number): string {
+  return `INR ${amountWordsBody(value)}`;
 }

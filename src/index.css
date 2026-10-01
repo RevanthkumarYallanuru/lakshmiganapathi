@@ -66,7 +66,9 @@ body {
 @media print {
   @page {
     size: 210mm 297mm;
-    margin: 5mm 10mm 5mm 10mm;
+    /* top right bottom left — kept in sync with PrintableBill.tsx's
+       COPY_WIDTH_MM/MAX_HEIGHT_MM math and billPdf.ts's MARGIN_T/L. */
+    margin: 3mm 2mm 3mm 2mm;
   }
   body * {
     visibility: hidden;
