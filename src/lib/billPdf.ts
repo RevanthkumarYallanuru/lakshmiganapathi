@@ -465,12 +465,13 @@ const TOTALS_VALUE_FONT_SIZE_PAID_NOW = TOTALS_LABEL_FONT_SIZE * 1.1;
 const TOTALS_VALUE_FONT_SIZE_PREVIOUS_BALANCE = TOTALS_LABEL_FONT_SIZE; // 1x
 const TOTALS_ROW_H = 4.6;
 
-// The customer name is drawn at ~1.7x the old size (8.5 -> ~14.5pt) for
-// visibility; CUSTOMER_NAME_ROW_H (replacing the 3.6mm the old, smaller
-// size used) gives it room so the Phone/Place lines below it don't
-// crowd its descenders.
-const CUSTOMER_NAME_FONT_SIZE = 14.5;
-const CUSTOMER_NAME_ROW_H = 6.2;
+// The customer name matches the item table's own text size — ITEM_ROW_
+// FONT_SIZE below is dynamic (shrinks for a tall configured row count)
+// but caps at 8pt, which is what it is for any normal row count, so
+// that's the flat size used here too, consistent with the print view's
+// equally-flat match.
+const CUSTOMER_NAME_FONT_SIZE = 8;
+const CUSTOMER_NAME_ROW_H = 3.6;
 
 // "Amount Chargeable (in words)" — the label stays small/gray like any
 // other field label; the actual words are drawn noticeably larger and
@@ -503,7 +504,12 @@ function measureContentEnd(doc: jsPDF, bill: Bill, opts: BillPdfOptions): number
   const rowCount = opts.billItemRowCount || DEFAULT_ROW_COUNT;
   const rowH = TABLE_BODY_H_MM / rowCount;
   let cy = 7;
-  cy += 3.6; // address line (reserved even if absent — keeps both copies identical)
+  // Matches drawCopy's own `if (opts.businessAddress)` exactly — these
+  // two functions must stay in lockstep line-for-line, since this one
+  // decides the box height/border *before* drawCopy draws the real
+  // content; a mismatch here is exactly the kind of bug that makes
+  // later sections drift out of alignment with each other.
+  if (opts.businessAddress) cy += 3.6; // address line
   if (opts.proprietorName) cy += 4; // proprietor name, its own line
   const hasPhoneLine = !!(opts.businessPhone || opts.alternatePhone);
   if (hasPhoneLine) cy += 3.4; // phone number(s) line
