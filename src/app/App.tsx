@@ -5,6 +5,7 @@ import { AppProviders } from "@/app/providers";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useToast } from "@/components/ui/Toast";
+import { ErrorBoundary } from "@/components/layout/ErrorBoundary";
 
 /** Surfaces the one-time "your session has expired" toast when the
  * API client clears an expired session — separate from ProtectedRoute,
@@ -38,8 +39,14 @@ function AppShell() {
 
 export function App() {
   return (
-    <AppProviders>
-      <AppShell />
-    </AppProviders>
+    // Outermost safety net — AppLayout has its own ErrorBoundary around
+    // just the page content (so a crash there keeps the sidebar/header
+    // usable); this one only ever fires for something outside that,
+    // e.g. the login page itself or a provider-level crash.
+    <ErrorBoundary>
+      <AppProviders>
+        <AppShell />
+      </AppProviders>
+    </ErrorBoundary>
   );
 }

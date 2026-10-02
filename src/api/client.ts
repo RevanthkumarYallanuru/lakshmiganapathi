@@ -28,6 +28,15 @@ export const SESSION_EXPIRED_EVENT = "auth:session-expired";
 
 export const api = axios.create({
   baseURL: `${API_URL}/api`,
+  // Without this, a request that never gets a response (a hung
+  // connection, a server that never answers) would leave the calling
+  // page's loading state spinning forever — React Query would never see
+  // success or failure to react to. 30s sits above the backend's
+  // worst-case Neon cold-start retry budget (~25s, see
+  // config/database.ts), so a slow-but-successful request still
+  // completes, and below the backend's 35s socket backstop, so a
+  // timeout here is always a clean "request took too long" ApiError.
+  timeout: 30_000,
 });
 
 api.interceptors.request.use((config) => {
@@ -51,11 +60,18 @@ api.interceptors.response.use(
       window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
     }
 
+    // The backend's own error.middleware.ts already keeps its own
+    // messages generic ("Internal server error", etc.) for anything
+    // that isn't a deliberate validation message, so passing through
+    // error.response?.data?.message can never leak database/backend
+    // internals here either.
     const message =
       error.response?.data?.message ??
-      (error.code === "ERR_NETWORK"
-        ? "Unable to reach the server. Check your connection and try again."
-        : "Something went wrong. Please try again.");
+      (error.code === "ECONNABORTED"
+        ? "The request took too long. Please try again."
+        : error.code === "ERR_NETWORK"
+          ? "Unable to reach the server. Check your connection and try again."
+          : "Something went wrong. Please try again.");
 
     return Promise.reject(
       new ApiError(

@@ -110,7 +110,7 @@ const amountCellPreviousBalance: CSSProperties = { textAlign: "right", fontSize:
 const TABLE_BODY_HEIGHT_PX = 182;
 
 // A4 portrait: 210mm x 297mm. Layout measurements per requirement:
-// 2mm left/right page margin, 3mm top margin (see index.css's @page
+// 2mm left/right page margin, 5mm top margin (see index.css's @page
 // rule, which must stay in sync with these), 20mm gap between the two
 // copies (with a dotted cut line centered in it). Box height is
 // otherwise content-driven — it hugs short bills instead of leaving a

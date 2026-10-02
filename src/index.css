@@ -66,9 +66,12 @@ body {
 @media print {
   @page {
     size: 210mm 297mm;
-    /* top right bottom left — kept in sync with PrintableBill.tsx's
-       COPY_WIDTH_MM/MAX_HEIGHT_MM math and billPdf.ts's MARGIN_T/L. */
-    margin: 3mm 2mm 3mm 2mm;
+    /* top right bottom left — left/right kept in sync with
+       PrintableBill.tsx's COPY_WIDTH_MM math and billPdf.ts's MARGIN_L.
+       Top is 5mm for paper only (the PDF keeps its own 3mm MARGIN_T):
+       most printers can't print the first ~3-5mm of the sheet, which
+       clipped the bill's top border at 3mm. */
+    margin: 5mm 2mm 3mm 2mm;
   }
   body * {
     visibility: hidden;

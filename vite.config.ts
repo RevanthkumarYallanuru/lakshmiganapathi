@@ -1,10 +1,39 @@
 import { fileURLToPath, URL } from "node:url";
 
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
-export default defineConfig({
+export default defineConfig(({ command, mode }) => {
+  // .env files are gitignored, so a production build gets VITE_API_URL
+  // only from the host's environment variables. If it's missing there,
+  // src/api/client.ts falls back to http://localhost:5000 — a build that
+  // deploys fine but can never reach the API ("Unable to connect" on
+  // every page). Fail the build instead, with a message saying exactly
+  // what to set, so a misconfigured deploy never goes live.
+  if (command === "build") {
+    const apiUrl = loadEnv(mode, process.cwd(), "VITE_").VITE_API_URL;
+    if (!apiUrl) {
+      throw new Error(
+        "VITE_API_URL is not set. Set it to the backend's public URL " +
+          "(e.g. https://your-api.onrender.com) in the build environment."
+      );
+    }
+    // On Netlify the site itself is served over https, so the browser
+    // blocks any plain-http API call as mixed content — and a local
+    // address can never be reached by a real visitor either.
+    if (
+      process.env.NETLIFY &&
+      (!apiUrl.startsWith("https://") || /localhost|127\.0\.0\.1/.test(apiUrl))
+    ) {
+      throw new Error(
+        `VITE_API_URL is "${apiUrl}" on a Netlify build — it must be the ` +
+          "backend's public https URL (not http://, not a local address)."
+      );
+    }
+  }
+
+  return {
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
@@ -42,4 +71,5 @@ export default defineConfig({
       },
     },
   },
+  };
 });

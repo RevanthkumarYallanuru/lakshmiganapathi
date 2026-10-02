@@ -63,17 +63,22 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [business, setBusiness] = useState<AuthBusiness | null>(null);
+  // Hydrated synchronously from localStorage via lazy initializers, not
+  // a useEffect: an effect runs *after* the first render, so
+  // ProtectedRoute would see user=null on that first render and
+  // redirect to /login — even for an already-logged-in visitor — then
+  // bounce back once the effect caught up a moment later. That
+  // redirect-then-bounce happened on every single direct URL load or
+  // page refresh. Reading localStorage here instead means the first
+  // render already has the real session, so ProtectedRoute's decision
+  // is correct from the start and no extra navigation ever happens.
+  const [user, setUser] = useState<AuthUser | null>(
+    () => getStoredSession()?.user ?? null
+  );
+  const [business, setBusiness] = useState<AuthBusiness | null>(
+    () => getStoredSession()?.business ?? null
+  );
   const [isSessionExpired, setIsSessionExpired] = useState(false);
-
-  useEffect(() => {
-    const session = getStoredSession();
-    if (session) {
-      setUser(session.user);
-      setBusiness(session.business);
-    }
-  }, []);
 
   useEffect(() => {
     function handleSessionExpired() {
