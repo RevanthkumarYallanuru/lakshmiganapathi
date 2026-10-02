@@ -446,32 +446,29 @@ function getNoteLines(doc: jsPDF, noteText: string): string[] {
   return doc.splitTextToSize(noteText, COPY_W - PAD * 2) as string[];
 }
 
-// The totals section's labels stay at the normal 7.5pt body size. Most
-// digit values (Discount/Partial Balance Paid/Balance) are drawn at
-// ~1.6x that (12pt) so they read clearly at a glance — TOTALS_ROW_H
-// (replacing the 3.6mm other single-line rows use) gives the taller
-// glyphs room without crowding the row below. Grand Total, Previous
-// Balance and Paid Now step down from that full size to a normal,
-// readable size instead, graded among themselves so Grand Total (what
-// matters most for THIS bill) still reads a touch larger than Paid Now
-// (already settled) or Previous Balance (carried over from before);
-// TOTALS_ROW_H stays the same for every row since it's already sized
-// for the tallest (12pt) text, so these smaller rows just leave a
-// little extra breathing room rather than needing less of it.
+// PDF-only sizing (kept independent from the print/CSS view's own
+// amountCell* styles — see PrintableBill.tsx). Discount/Partial Balance
+// Paid stay at the full ~1.6x-of-label size; Grand Total, Balance,
+// Paid Now and Previous Balance are graded smaller than that, in that
+// order, each with its own named constant so there's no risk of the
+// Grand Total <-> Balance mix-up this section has had before. Every
+// row still shares the same TOTALS_ROW_H spacing, which is already
+// sized for the tallest value drawn here — a smaller row just leaves a
+// little extra breathing room, never less of it, so none of this risks
+// a collision between rows.
 const TOTALS_LABEL_FONT_SIZE = 7.5;
-const TOTALS_VALUE_FONT_SIZE = 12;
-const TOTALS_VALUE_FONT_SIZE_GRAND_TOTAL = TOTALS_LABEL_FONT_SIZE * 1.2;
+const TOTALS_VALUE_FONT_SIZE = 12; // Discount, Partial Balance Paid
+const TOTALS_VALUE_FONT_SIZE_GRAND_TOTAL = 9.5;
+const TOTALS_VALUE_FONT_SIZE_BALANCE = TOTALS_LABEL_FONT_SIZE * 1.2; // 9
 const TOTALS_VALUE_FONT_SIZE_PAID_NOW = TOTALS_LABEL_FONT_SIZE * 1.1;
 const TOTALS_VALUE_FONT_SIZE_PREVIOUS_BALANCE = TOTALS_LABEL_FONT_SIZE; // 1x
 const TOTALS_ROW_H = 4.6;
 
-// The customer name matches the item table's own text size — ITEM_ROW_
-// FONT_SIZE below is dynamic (shrinks for a tall configured row count)
-// but caps at 8pt, which is what it is for any normal row count, so
-// that's the flat size used here too, consistent with the print view's
-// equally-flat match.
-const CUSTOMER_NAME_FONT_SIZE = 8;
-const CUSTOMER_NAME_ROW_H = 3.6;
+// The customer name is drawn clearly larger than the surrounding field
+// labels — CUSTOMER_NAME_ROW_H is sized generously for this font so the
+// Phone/Place lines below it never crowd its descenders.
+const CUSTOMER_NAME_FONT_SIZE = 11.5;
+const CUSTOMER_NAME_ROW_H = 5;
 
 // "Amount Chargeable (in words)" — the label stays small/gray like any
 // other field label; the actual words are drawn noticeably larger and
@@ -479,8 +476,8 @@ const CUSTOMER_NAME_ROW_H = 3.6;
 // line (the label's own line uses its own, smaller height).
 const WORDS_LABEL_FONT_SIZE = 7.5;
 const WORDS_LABEL_LINE_HEIGHT = 3.2;
-const WORDS_FONT_SIZE = 11;
-const WORDS_LINE_HEIGHT = 4.3;
+const WORDS_FONT_SIZE = 8.5;
+const WORDS_LINE_HEIGHT = 3.3;
 
 /** Same wrap-to-content-width approach as `getNoteLines`, for the
  * "Amount Chargeable (in words)" line — a large total can run past one
@@ -737,11 +734,13 @@ function drawCopy(
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7);
   const itemColWidth = b2 - b1 - 2;
-  // Item name/quantity/rate/amount are bold and a point larger than
-  // the original design (was 7pt normal) for readability — capped at
-  // 8pt, and shrunk only if a tall row count (13-15) makes rows too
-  // short to fit an 8pt line comfortably. S.No is left as-is, unchanged.
-  const ITEM_ROW_FONT_SIZE = Math.max(6, Math.min(8, rowH * 1.89));
+  // Item name/quantity/rate/amount are bold and noticeably larger than
+  // the original design for readability — capped at 9.5pt (reaches
+  // that cap for any row count up to 12; a taller configured row count
+  // still shrinks gracefully so rows never crowd each other), floored
+  // at 6pt so a tall row count (13-15) never goes illegibly small.
+  // S.No is left as-is, unchanged.
+  const ITEM_ROW_FONT_SIZE = Math.max(6, Math.min(9.5, rowH * 2.2));
   for (const [index, line] of bill.bill_items.entries()) {
     const rowTextY =
       tableTop + headerH + index * rowH + rowH / 2 + ITEM_ROW_FONT_SIZE * 0.1235;
@@ -797,7 +796,7 @@ function drawCopy(
   doc.setFont("helvetica", "bold");
   doc.setFontSize(TOTALS_LABEL_FONT_SIZE);
   doc.text("Grand Total", x + PAD, cy);
-  doc.setFontSize(TOTALS_VALUE_FONT_SIZE);
+  doc.setFontSize(TOTALS_VALUE_FONT_SIZE_GRAND_TOTAL);
   doc.text(money(bill.grand_total), contentRight, cy, { align: "right" });
   cy += TOTALS_ROW_H;
 
@@ -831,7 +830,7 @@ function drawCopy(
     doc.setFont("helvetica", "bold");
     doc.setFontSize(TOTALS_LABEL_FONT_SIZE);
     doc.text(includePreviousBalance ? "Balance" : "Current Balance", x + PAD, cy);
-    doc.setFontSize(TOTALS_VALUE_FONT_SIZE_GRAND_TOTAL);
+    doc.setFontSize(TOTALS_VALUE_FONT_SIZE_BALANCE);
     doc.text(
       money(includePreviousBalance ? bill.overall_balance : bill.current_bill_balance),
       contentRight,
